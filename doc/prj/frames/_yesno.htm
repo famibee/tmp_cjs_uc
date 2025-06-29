@@ -1,0 +1,89 @@
+<!doctype html><html lang="ja">
+<head><meta charset="utf-8"/><title>&nbsp;</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="lib/bootstrap.min.css">
+<style type="text/css">
+	html {user-select: none; -webkit-user-select: none;}	/* 選択禁止 */
+	body {padding-top: 70px; min-height: 100vh;}
+	.btn:hover, .btn:focus {
+		background: rgba(204, 255, 204, 0.5);
+		color: black;
+		filter: drop-shadow(1px 3px 5px rgba(25, 25, 25, 0.9));
+	}
+</style>
+<script defer src="lib/bootstrap.min.js"></script>
+<script>
+	let o = {mes: '本文', pic: ''};
+	const isDev = (location.protocol === 'file:');
+	const isWebp = false/*WEBP*/;
+	document.addEventListener('DOMContentLoaded', ()=> {
+		if (isWebp) {
+			const img = document.getElementById('img');
+			img.dataset.src = img.dataset.src.replace(/\.(jpe?g|png)$/, '.webp');	// 本番でsn_repRes()に渡してしまうので
+		}
+
+		if (isDev) val2ctrl();	// デザイン用
+	}, false);
+
+	// SKYNovelから読み書きする変数なので、触らない。わざとvar
+	var val_dic = null;
+
+	var val_ui_lang = 'ja';
+	var val_ui = {
+		"ja": {
+			"ok"	: "決定",
+			"cancel": "キャンセル"
+		}
+	};
+	function ui_redraw() {
+		const ok = document.getElementById('ok');
+		ok.textContent = ok.title = ok.ariaLabel = val_ui[val_ui_lang]['ok'];
+		const close = document.getElementById('close');
+		close.textContent = close.title = close.ariaLabel = val_ui[val_ui_lang]['cancel'];
+	}
+
+	function val2ctrl() {	// 変数→コンポーネント
+		if (typeof val_ui === 'string') val_ui = JSON.parse(val_ui);
+		ui_redraw();
+
+		if (val_dic) o = JSON.parse(val_dic);
+		if (isWebp) o.pic = o.pic.replace(/\.(jpe?g|png)$/, '.webp');
+
+		document.getElementById('mes').textContent = o.mes;
+		const img = document.getElementById('img');
+		img.hidden = !o.pic;
+		if (! img.hidden) img.dataset.src = o.pic;
+
+		Array.from(document.getElementsByTagName('img')).forEach(i=> setImg(i));
+	}
+
+	// 画像ロード処理差し替え（関数名変更不可）
+	function sn_repRes(i) {setImg = i;}
+	let setImg = i=> i.src = i.dataset.src;
+
+</script>
+</head>
+<body style="background: rgba(0, 0, 0, 0.5);" oncontextmenu="return false">
+
+<div class="container-fluid d-flex align-items-center justify-content-center" style="height: 60vh;"><div class="row" style="width: 100vw;">
+	<div class="col-1 col-sm-3 col-lg-4"></div>
+
+	<div class="col-10 col-sm-6 col-lg-4">
+	<div class="card border border-dark" style="background-color: #070707; background-image: linear-gradient(340deg, #070707 19%, #f3f3f3 72%);">
+		<!-- グラデーションはこのサービスで制作 https://www.grabient.com/ -->
+		<img id="img" data-src="./_archive_browser.jpg" class="card-img-top"/>
+		<div class="card-body">
+			<p id="mes" class="card-text fs-5" style="text-shadow: 0px 2px 2px rgba(255,255,255,0.4); ">example text.</p>
+			<div class="text-center">
+				<button id="ok" type="button" class="btn btn-dark btn-lg mx-2" aria-label="決定" data-bs-toggle="tooltip" title="決定">決定</button>
+				<button id="close" type="button" class="btn btn-outline-light btn-lg mx-2" aria-label="キャンセル" data-bs-toggle="tooltip" title="キャンセル">キャンセル</button>
+			</div>
+		</div>
+	</div>
+	</div>
+
+	<div class="col-1 col-sm-3 col-lg-4"></div>
+
+</div></div>
+
+</body></html>

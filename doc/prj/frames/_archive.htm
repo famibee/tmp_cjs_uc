@@ -1,0 +1,503 @@
+<!doctype html><html lang="ja">
+<head><meta charset="utf-8"/><title>&nbsp;</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="lib/bootstrap.min.css">
+<style type="text/css">
+	html {user-select: none; -webkit-user-select: none;}	/* 選択禁止 */
+	body {padding-top: 70px; min-height: 100vh;}
+	.row {--bs-gutter-x: 0.3rem;}	 /* bootstrapを微調整 */
+	.btn:hover, .btn:focus {
+		border: solid black;
+		background: rgba(204, 255, 204, 0.5);
+		color: black;
+		filter: drop-shadow(1px 3px 5px rgba(250, 250, 250, 0.9));
+	}
+
+	.card-img-overlay {
+		pointer-events: none;
+	}
+	.card-img-overlay >p {
+		background: rgba(255, 255, 255, 0.7);
+	}
+	.mask {
+		background-color: rgba(251, 251, 251, 0.15);
+	}
+	.hover-overlay:hover ~ .card-text, .hover-overlay:focus ~ .card-text {
+		background-color: black;
+		color: white;
+		margin: 0;
+		padding: 0 8px;
+	}
+	.hover-overlay[data-focus] ~ .card-text {
+		background-color: inherit;
+		color: inherit;
+	}
+
+	.modal-header .close:hover, .modal-header .close:focus {
+		border: 1px solid black;
+		border-radius: 5px;
+	}
+	.modal-footer > .btn:hover, .modal-footer > .btn:focus {
+		border: 1px solid black;
+		border-radius: 5px;
+		filter: none;
+	}
+
+	.btn_delete {	/* 削除のフローティングボタン */
+		position: absolute;
+		top: 130px;
+		right: 10px;
+	}
+	.del_anime {
+		transition: 0.5s;
+		transform: scale(0.1);
+	}
+
+	/* 複数行で「text-overflow: ellipsis;」みたいなことをする方法色々。 | blue sky IT https://www.aozora-blog.com/2018/07/22/post-151/ */
+	.multiline-text {
+		background-color: white;
+		position: relative;
+		height: 6em;	/* 4行 * 1.5 */
+		overflow: hidden;
+		text-align: unset;
+		margin: 0 0.5em;	/* 微調整 */
+	}
+	.multiline-text:before,
+	.multiline-text:after {
+		position: absolute;
+		background-color: inherit;
+	}
+	.multiline-text:before {
+		content: "...";
+		bottom: 0;
+		right: 0;
+	}
+	.multiline-text:after {
+		content: "";
+		height: 100%;
+		width: 100%;
+	}
+</style>
+<script defer src="lib/bootstrap.min.js"></script>
+<script>
+	document.ondragstart = ()=> false;
+	const isDev = (location.protocol === 'file:');
+	const isWebp = false/*WEBP*/;
+	let tgl_del = ()=> {};
+	document.addEventListener('DOMContentLoaded', ()=> {
+		if (isDev) {	// デザイン用
+			document.getElementById('do_loadsave').addEventListener('click', ()=> console.log(`do_loadsave:${val_place}`), {passive: true});
+			val2ctrl();
+		}
+		else if (isWebp) Array.from(document.getElementsByTagName('img')).forEach(v=> v.dataset.src = v.dataset.src.replace(/\.(jpe?g|png)$/, '.webp'));	// 本番でsn_repRes()に渡してしまうので
+
+		document.getElementById('tgl_del').addEventListener('click', ()=> tgl_del(), {passive: true});
+
+		document.getElementById('do_del').addEventListener('click', ()=> {
+			if (isDev) console.log(`do_delete:${val_place}`);	// デザイン用
+
+			// サムネイル削除
+			const card = document.querySelector(`[data-id="${val_place}"]`).parentElement;	// この辺はBootstrapテンプレ毎のくせがあるかも
+			card.classList.add('del_anime');
+			const idx = a.findIndex(v=> v.place == val_place);
+			if (idx > -1) {
+				a.splice(idx, 1);
+				if (val_mode === 'Save') a = a.slice(0, -1);
+				setTimeout(()=> val2ctrl(), 500);
+			}
+		}, {passive: true});
+
+		Array.from(document.getElementsByClassName('modal'))
+		.forEach(elm=> {
+			elm.addEventListener('show.bs.modal', e=> {
+				is_modal = true;
+
+				// モーダル呼び出し元から id取得
+				const btn = event.relatedTarget;
+				val_place = btn.parentNode.dataset.id;
+
+				// モーダルのフォーカス移動のために他のボタンを一時無効・有効化
+				Array.from(document.querySelectorAll('.navbar button, .row button, .hover-overlay'))
+				.forEach(v=> v.disabled = true);
+			});
+			elm.addEventListener('hidden.bs.modal', e=> {
+				is_modal = false;
+
+				// モーダルのフォーカス移動のために他のボタンを一時無効・有効化
+				Array.from(document.querySelectorAll('.navbar button, .row button, .hover-overlay'))
+				.forEach(v=> v.disabled = false);
+
+				document.querySelector(`[data-id="${val_place}"] ${
+					elm.id === 'modal_del'
+					? '.btn_delete'
+					: '.hover-overlay'
+				}`).focus();
+			});
+		});
+	});
+	let tid = undefined;
+	window.addEventListener('resize', ()=> {	// SKYNovelでは初期化後一度発生
+		if (tid) return;
+		tid = setTimeout(async ()=> {tid = undefined; await initPager();}, 500);	// clearTimeout()不要と判断
+	}, {passive: true});
+	//window.addEventListener('load', ()=> {});	// どちらでも発生
+
+	// 自動ページ機構
+	let page = 0;
+	let len = 0;
+	async function initPager() {
+		// init
+		len = a.length;
+		function dispAll() {
+			for (let i=0; i<len; ++i) {
+				const c = document.getElementById(`col${i}`);
+				c.style.display = '';
+			}
+		}
+		dispAll();
+		await new Promise(re=> requestAnimationFrame(re));
+
+		// ページにぴったる収まる縦横数を調べる
+		let cx = 0, cy = 1, beforeLeft = -1;
+		let procPager = i=> {
+			const c = document.getElementById(`col${i}`);
+			const {left} = c.getBoundingClientRect();
+			const lineBreak = beforeLeft < left;
+			beforeLeft = left;
+			if (lineBreak) {++cx; return;}
+
+			procPager = i=> {
+				if (i % cx > 0) return;
+
+				const c = document.getElementById(`col${i}`);
+				const {bottom} = c.getBoundingClientRect();
+				if (window.innerHeight > bottom) {++cy; return;}
+
+				procPager = ()=> {};
+			};
+			procPager(i);
+		};
+		for (let i=0; i<len; ++i) procPager(i);
+
+		// finish
+		const numElmPerPage = cx * cy;
+		const pageMax = Math.trunc((len -1) /numElmPerPage) +1;
+		if (page > pageMax -1) page = pageMax -1;
+
+		function hideOtherPage() {
+			if (pageMax <= 1) return;
+			for (let i=0; i<len; ++i) {
+				if (page *numElmPerPage <= i && i < (page +1) *numElmPerPage) continue;
+
+				const c = document.getElementById(`col${i}`);
+				c.style.display = 'none';
+			}
+		}
+		repage = ()=> hideOtherPage();
+		hideOtherPage();
+
+		const pn = document.getElementById('pagination');
+		if (pageMax === 1) pn.style.display = 'none';
+		else {
+			pn.style.display = '';
+
+			let htm = '';
+			for (let p=0; p<pageMax; ++p) htm += `
+	<input type="radio" class="btn-check" name="page" id="page${p}" value="${p}" autocomplete="off"${p === page ?' checked' :''}>
+	<label class="btn btn-outline-secondary" for="page${p}">${p +1}</label>`;
+			pn.innerHTML = htm;
+
+			// page変更
+			const ps = document.getElementsByName('page');
+			const lenPs = ps.length;
+			ps.forEach(v=> v.addEventListener('change', ()=> {
+				for (let i=0; i<lenPs; ++i) {
+					if (! ps[i].checked) continue;
+
+					page = i;
+					dispAll();
+					hideOtherPage();
+					break;
+				}
+			}));
+		}
+	}
+	let repage = ()=> {};
+
+	// SKYNovelから読み書きする変数なので、触らない。わざとvar
+	var val_s_place = 999;		// 次のセーブ位置
+	var val_dic = null;
+//	var val_caller = 'Title';	// タイトル画面から呼ばれた
+	var val_caller = 'Text';	// 本文から呼ばれた
+//	var val_mode = 'Load';		// ロード画面
+	var val_mode = 'Save';		// セーブ画面
+	var val_place = 0;
+	var is_delmode = false;
+	var is_modal = false;
+
+	var val_ui_lang = 'ja';
+	var val_ui = {
+		"ja": {
+			"save": {
+				"screen name": "セーブ",
+				"セーブしますか？": "セーブしますか？",
+				"do_loadsave": "セーブする"
+			},
+			"load": {
+				"screen name": "ロード",
+				"セーブしますか？": "ロードしますか？",
+				"do_loadsave": "ロードする"
+			},
+			"non-text": {
+				"close": "閉じる",
+				"tgl_del": "編集する"
+			},
+			"新規にセーブします": "　新規にセーブします",
+			"セーブ警告": "セーブデータを上書きし、元のデータは失われます",
+			"セーブキャンセル": "キャンセル",
+			"確認": "確認",
+			"do_del": "削除する",
+			"削除キャンセル": "キャンセル",
+			"セーブデータ削除": "セーブデータを削除しますか？"
+		}
+	};
+	function ui_redraw() {
+		const o = val_ui[val_ui_lang];
+		for (const k in o) {
+			const elm = document.getElementById(k);
+			if (elm) elm.textContent = o[k];
+		}
+		const nt = o['non-text'];
+		for (const k in nt) {
+			const elm = document.getElementById(k);
+			if (elm) elm.title = elm.ariaLabel = nt[k];
+		}
+		const sl = o[(val_mode === 'Load') ?'load' :'save'];
+		for (const k in sl) {
+			const elm = document.getElementById(k);
+			if (elm) elm.textContent = elm.title = elm.ariaLabel = sl[k];
+		}
+
+		Array.from(document.getElementsByClassName('btn_cancel')).forEach(v=> v.title = v.ariaLabel = val_ui[val_ui_lang]['btn_cancel']);
+		Array.from(document.getElementsByClassName('btn_delete')).forEach(v=> v.title = v.ariaLabel = val_ui[val_ui_lang]['do_del']);
+	}
+
+	let a = [	// セーブデータの内容
+		{place: '10', pic: '_archive_browser.jpg', dt: '2020/12/18 11:44', text: '　ああ、桜の樹の下には屍体が埋まつてゐる！'},
+		{place: '11', pic: '../bg/yun_1317.jpg', dt: '2020/12/18 11:43', text: '　この渓間ではなにも俺をよろこばすものはない。鶯《うぐひす》や四十雀《しじふから》も、白い日光をさ青に煙らせてゐる木の若芽も、ただそれだけでは、もうろうとした心象に過ぎない。俺には惨劇が必要なんだ。その平衡があつて、はじめて俺の心象は明確になつて来る。俺の心は悪鬼のやうに憂欝に渇いてゐる。俺の心に憂欝が完成するときにばかり、俺の心は和《なご》んで来る。'},
+		{place: '12', pic: '../bg/yun_2352.jpg', dt: '2020/12/18 11:42', text: '  This is not justified test message. This is written many words and cut last sentence.'},
+		{place: '13', pic: '../bg/yun_1184.jpg', dt: '2020/12/18 11:41', text: '　それは渓の水が乾いた磧《かはら》へ、小さい水溜を残してゐる、その水のなかだつた。思ひがけない石油を流したやうな光彩が、一面に浮いてゐるのだ。お前はそれを何だつたと思ふ。それは何万匹とも数の知れない、薄羽かげらふの屍体だつたのだ。隙間なく水の面を被つてゐる、彼等のかさなりあつた翅《はね》が、光にちぢれて油のやうな光彩を流してゐるのだ。そこが、産卵を終つた彼等の墓場だつたのだ。'},
+		{place: '14', pic: '../bg/yun_2384.jpg', dt: '2020/12/18 11:40', text: '　dummy data 二三日前、俺は、ここの渓へ下りて、石の上を伝ひ歩きしてゐた。水のしぶきのなかからは、あちらからもこちらからも、薄羽かげらふがアフロデイツトのやうに生れて来て、渓の空をめがけて舞ひ上つてゆくのが見えた。お前も知つてゐるとほり、彼等はそこで美しい結婚をするのだ。暫らく歩いてゐると、俺は変なものに出喰はした。'},
+	];
+
+	function modal_hide() {
+		Array.from(document.querySelectorAll('#modal_sl, #modal_del'))
+		.forEach(elm=> bootstrap.Modal.getInstance(elm)?.hide());
+	}
+	function val2ctrl() {	// 変数→コンポーネント
+		if (typeof val_ui === 'string') val_ui = JSON.parse(val_ui);
+		ui_redraw();
+
+		if (val_dic) a = JSON.parse(val_dic);
+		const doit = document.getElementById('do_loadsave');
+
+		// 配列 a をもとにサムネイル群を生成
+		const lst = document.getElementsByClassName('row')[0];
+		lst.textContent = null;
+		if (val_mode === 'Save') a.push({pic: '_archiveBtn_nouse.png', dt: '', text: val_ui[val_ui_lang]['新規にセーブします'], place: val_s_place});
+		const u = new Date().getTime();
+		// 注意：この画面で .col要素は insertAdjacentHTML('afterbegin' 追加なので、降順
+		len = a.length;
+		a.forEach((v, i)=> {
+			if (isWebp && v.pic.slice(0, 10) !== 'userdata:/') v.pic = v.pic.replace(/\.(jpe?g|png)$/, '.webp');
+
+			const modal = (val_mode === 'Load' && val_caller === 'Title')
+						|| (val_mode === 'Save' && v.dt === '');
+			lst.insertAdjacentHTML('afterbegin', `
+<div class="col" id="col${len -i -1}"><div class="card p-1 mb-1" data-id="${v.place}">
+	<div class="bg-image hover-overlay ripple${
+		modal ?' no_modal' :'" data-bs-toggle="modal" data-bs-target="#modal_sl'
+	}" data-ripple-color="light">
+		<img data-src="${v.pic}?u=${u}" class="img-fluid"/>
+		<div class="mask"></div>
+	</div>${(v.dt === '') ?'' :`
+	<div class="card-img-overlay"><p class="card-text">${v.dt}</p></div>
+	<button type="button" class="btn btn-lg btn-danger btn-floating py-0 btn_delete" title="削除する" aria-label="削除する" data-bs-toggle="modal" data-bs-target="#modal_del">
+		<span style="font-size: 2em;">&times</span>
+	</button>`}
+	<div class="card-text multiline-text">${v.text}</div>
+</div></div>`);
+		});
+
+		// 画像クリック→Save / Load
+		const ev = new MouseEvent('click', {cancelable: true});
+		const aCard = Array.from(lst.getElementsByClassName('bg-image'));
+		aCard.forEach(v=> {
+			v.addEventListener('click', ()=> {
+				if (is_delmode) return;		// Delモード時はSave/Loadさせない方が
+
+				if (v.classList.contains('no_modal')) {	// 【未使用】サムネイル
+					val_place = v.parentNode.dataset.id;
+					doit.dispatchEvent(ev);	// 疑似クリック
+					return;
+				}
+
+				document.getElementById('modal_mes').textContent =
+					(val_mode === 'Save') ?val_ui['セーブ警告'] :'';
+			}, {passive: true});
+			if (! v.hasAttribute('tabindex')) v.tabIndex = 0;// フォーカスを持つように
+			v.addEventListener('focus', ()=> v.classList.add('z-depth-4'), {passive: true});
+			v.addEventListener('blur', ()=> v.classList.remove('z-depth-4'), {passive: true});
+		});
+
+		// 編集ボタン（削除ボタンを表示する）
+		const aBtnX = Array.from(lst.getElementsByClassName('btn_delete'));
+		const aMdl = Array.from(lst.querySelectorAll('.hover-overlay'));
+		is_delmode = false;	// 閉じて開いた時用
+		tgl_del = ()=> {	// 閉じて開いた時用に関数を差し替えする形式で
+			is_delmode = ! is_delmode;
+			aMdl.forEach(v=> {
+				v.disabled = is_delmode;
+				v.dataset.focus = ! is_delmode;
+				if (! v.classList.contains('no_modal')) v.dataset.toggle = is_delmode ?'' :'modal'
+			});
+			aBtnX.forEach(v=> {
+				v.classList.toggle('scale-out');
+
+				// SKYNovelがフォーカスを与えないよう、明確に非表示指定
+				v.style.display = is_delmode ?'block' :'none';
+			});
+		};
+		// サムネイルごとの削除ボタン
+		aBtnX.forEach(v=> {
+			if (! v.hasAttribute('tabindex')) v.tabIndex = 0;// フォーカスを持つように
+			// SKYNovelがフォーカスを与えないよう、明確に非表示指定
+			v.style.display = 'none';
+		});
+
+		Array.from(document.getElementsByTagName('img')).forEach(i=> setImg(i));
+		// 画像のイベント、一度だけ。SKYNovelでは発生しない
+		window.addEventListener('load', async ()=> await initPager());
+
+		repage();
+	}
+
+	// 画像ロード処理差し替え（関数名変更不可）
+	function sn_repRes(i) {setImg = i;}
+	let setImg = i=> i.src = i.dataset.src;
+
+</script>
+</head>
+<body class="bg-dark bg-gradient" oncontextmenu="return false">
+
+<nav class="navbar fixed-top navbar-expand navbar-dark bg-dark">
+<div class="container-fluid">
+
+	<div class="collapse navbar-collapse mr-auto">
+		<button id="close" type="button" class="btn btn-outline-light py-0" data-bs-toggle="tooltip" aria-label="x閉じる" title="x閉じる">
+			<span style="font-size: 2em; pointer-events: none;" aria-hidden="true">&times;</span>
+		</button>
+	</div>
+
+	<div class="collapse navbar-collapse justify-content-center">
+		<span class="navbar-brand" id="screen name">xロード</span>
+	</div>
+
+	<div class="collapse navbar-collapse justify-content-end">
+		<button id="tgl_del" type="button" class="btn btn-outline-light btn-rounded" data-bs-toggle="tooltip" aria-label="x編集する" title="x編集する">
+			<svg width="1.9em" height="1.9em" viewbox="0 0 16 16" class="bi bi-trash-fill" style="pointer-events: none;" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+				<path fill-rule="evenodd" d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1H2.5zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5zM8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5zm3 .5a.5.5 0 0 0-1 0v7a.5.5 0 0 0 1 0v-7z"/>
+			</svg>
+		</button>
+	</div>
+
+</div>
+</nav>
+
+
+<div class="container-fluid"><div class="row row-cols-2 row-cols-sm-3 row-cols-lg-4 row-cols-xl-5 row-cols-xxl-6">
+
+<!-- 上記 val2ctrl() でクリア・再生成されるが、元は以下の連続 -->
+<div class="col"><div class="card p-1 mb-1" data-id="1">
+	<div class="bg-image hover-overlay ripple" data-ripple-color="light">
+		<img data-src="./_archive_browser.jpg" class="img-fluid"/>
+		<div class="mask"></div>
+	</div>
+	<div class="card-img-overlay"><p class="card-text">2020/12/18 11:40</p></div>
+	<button type="button" class="btn btn-lg btn-danger btn-floating py-0 btn_delete" title="x削除する" aria-label="x削除する" data-bs-toggle="modal" data-bs-target="#modal_del">
+		<span style="font-size: 2em;">&times</span>
+	</button>
+	<div class="card-text multiline-text">
+		　壁土が剥がれ歩く度に廊下が鳴る、ぼろぼろの廊下。
+	</div>
+</div></div>
+
+</div></div>
+
+
+<nav class="navbar fixed-bottom navbar-dark">
+	<div class="container-fluid justify-content-center">
+
+<div class="btn-group bg-dark" role="group" aria-label="pagination" id="pagination">
+	<input type="radio" class="btn-check" name="page" id="page0" value="0" autocomplete="off" checked>
+	<label class="btn btn-outline-secondary" for="page0">1</label>
+
+	<input type="radio" class="btn-check" name="page" id="page1" value="1" autocomplete="off">
+	<label class="btn btn-outline-secondary" for="page1">2</label>
+
+	<input type="radio" class="btn-check" name="page" id="page2" value="2" autocomplete="off">
+	<label class="btn btn-outline-secondary" for="page2">3</label>
+</div>
+
+	</div>
+</nav>
+
+
+<div id="modal_sl" class="modal fade" tabindex="-1" aria-labelledby="modal_sl_lbl" aria-hidden="true">
+<div class="modal-dialog"><div class="modal-content">
+<div class="modal-header">
+	<h5 class="modal-title" id="modal_sl_lbl">
+		<svg width="1.0625em" height="1em" viewbox="0 0 17 16" class="bi bi-exclamation-triangle-fill" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+			<path fill-rule="evenodd" d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5a.905.905 0 0 0-.9.995l.35 3.507a.552.552 0 0 0 1.1 0l.35-3.507A.905.905 0 0 0 8 5zm.002 6a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
+		</svg>
+		<span id="セーブしますか？">xロードしますか？</span>
+	</h5>
+	<button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+		<span aria-hidden="true">&times;</span>
+	</button>
+</div>
+<div class="modal-body">
+	<p id="modal_mes"></p>
+</div>
+<div class="modal-footer">
+	<button type="button" data-bs-dismiss="modal" class="btn btn-outline-dark" id="セーブキャンセル" title="キャンセル" aria-label="キャンセル">xキャンセル</button>
+	<button type="button" data-bs-dismiss="modal" class="btn btn-danger" id="do_loadsave" title="ロードする" aria-label="ロードする">xロードする</button>
+</div>
+</div></div>
+</div>
+
+
+<div id="modal_del" class="modal fade" tabindex="-1" aria-labelledby="modal_del_lbl" aria-hidden="true">
+<div class="modal-dialog"><div class="modal-content">
+<div class="modal-header">
+	<h5 class="modal-title" id="modal_del_lbl">
+		<svg width="1.0625em" height="1em" viewbox="0 0 17 16" class="bi bi-exclamation-triangle-fill" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+			<path fill-rule="evenodd" d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5a.905.905 0 0 0-.9.995l.35 3.507a.552.552 0 0 0 1.1 0l.35-3.507A.905.905 0 0 0 8 5zm.002 6a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
+		</svg>
+		<span id="確認">x確認</span>
+	</h5>
+	<button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+		<span aria-hidden="true">&times;</span>
+	</button>
+</div>
+<div class="modal-body" id="セーブデータ削除">
+	xセーブデータを削除しますか？
+</div>
+<div class="modal-footer">
+	<button type="button" data-bs-dismiss="modal" class="btn btn-outline-dark" id="削除キャンセル" title="キャンセル" aria-label="キャンセル">xキャンセル</button>
+	<button type="button" data-bs-dismiss="modal" class="btn btn-danger" id="do_del" title="削除する" aria-label="削除する">x削除する</button>
+</div>
+</div></div>
+</div>
+
+</body></html>

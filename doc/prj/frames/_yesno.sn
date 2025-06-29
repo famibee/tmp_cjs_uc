@@ -1,0 +1,96 @@
+	[return cond=const.sn.frm.yesno]
+
+	[add_frame id=yesno src=_yesno visible=false]
+	[event key='dom=yesno:#ok' label=*y global=true]
+	[event key='dom=yesno:#close' label=*cancel global=true]
+
+[let_ml name=dicUI]
+	{
+		"ja": {
+			"ok"	: "了解",
+			"cancel": "キャンセル"
+		},
+		"es": {
+			"ok"	: "entendido",
+			"cancel": "Cancelar"
+		},
+		"en": {
+			"ok"	: "ok",
+			"cancel": "cancel"
+		},
+		"cn": {
+			"ok"	: "收到",
+			"cancel": "取消"
+		},
+		"ct": {
+			"ok"	: "收到",
+			"cancel": "取消"
+		}
+	}
+[endlet_ml]
+	[set_frame id=yesno var_name=val_ui text=&dicUI]
+
+[macro name=ask_ync
+	sum='プレイヤー意志確認\nプレイヤーに「はい」「いいえ」等の二択で確認を行なう'
+	detail='プレイヤーが押下した結果をtmp:_yesnoに「y」か「n」で返す'
+
+	%mes='String||プレイヤーに質問したい文言'
+]
+	&tmpGameState = isGameState
+
+	[enable_event enabled=false]
+	[enable_event enabled=false layer=mes_sysmenu]
+	&isGameState = false
+	&save:sn.doRecLog = false
+
+	[clear_event]
+
+	; 最新値で更新
+	[let name=pic text=%pic|'']
+	[set_frame id=yesno var_name=val_dic text=#&'{"mes":"$mp:mes","pic":"$pic"}'#]
+	[set_frame id=yesno var_name=val_ui_lang text=&lang]
+	[let_frame id=yesno var_name=val2ctrl function=true]
+
+	[frame id=yesno visible=true float=true]
+
+	&_yesno = 'n'
+
+	[event key=y label=*y]
+	[event key=n label=*cancel]
+	[event key=s label=*cancel]
+	[event key=l label=*cancel]
+	[event key=rightclick label=*cancel]
+	[event key=meta label=*cancel]
+	[event key=control label=*cancel]
+	[event key=delete label=*cancel]
+	[event key=backspace label=*cancel]
+	[event key=shift label=*cancel]
+	[event key=end label=*cancel]
+	[event key=escape label=*cancel]
+	[event key=sn:chgNavLang label=*chgNavLang call=true]
+[s]
+
+*chgNavLang
+	[call label=*exit]
+
+	[call fn=ext_lang]
+	[reload_script cond=isGameState]
+[return]
+
+
+*y	&_yesno = 'y'
+	[se fn=&sysse_ok2 buf=SYS]
+	[jump label=*exit]
+*cancel
+	[se fn=&sysse_cancel buf=SYS]
+*exit
+	[frame id=yesno visible=false]
+
+	[enable_event enabled=true]
+	[enable_event enabled=true layer=mes_sysmenu]
+	&isGameState = tmpGameState
+	&save:sn.doRecLog = tmpGameState
+	[set_focus to=null]
+[endmacro]
+
+[return]

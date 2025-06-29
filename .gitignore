@@ -1,0 +1,26 @@
+# Visual Studio Code cache/options directory
+/.vscode/*.json
+/.vscode/storage/
+
+# Build results
+/build/icon/
+/build/package/
+/build/*.yaml
+/build/*.yml
+/build/*.nsh
+
+/core/diff.json
+pass.json
+
+# アプリ版メインjs
+/doc/app/*.js
+/doc/crypto_prj
+/doc/web*.js
+
+# Node.js Tools
+/node_modules/
+
+# SKYNovel Dev famibee's Work Folder
+/Work/
+
+*.LICENSE.txt

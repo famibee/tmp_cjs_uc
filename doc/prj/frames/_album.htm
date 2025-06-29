@@ -1,0 +1,311 @@
+<!doctype html><html lang="ja">
+<head><meta charset="utf-8"/><title>&nbsp;</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="lib/bootstrap.min.css">
+<style type="text/css">
+	html {user-select: none; -webkit-user-select: none;}	/* 選択禁止 */
+	body {padding-top: 70px; min-height: 100vh;}
+	.row {--bs-gutter-x: 0.3rem;}	 /* bootstrapを微調整 */
+	.btn:hover, .btn:focus {
+		border: solid black;
+		background: rgba(204, 255, 204, 0.5);
+		color: black;
+		filter: drop-shadow(1px 3px 5px rgba(250, 250, 250, 0.9));
+	}
+
+	.mask {
+		background-color: rgba(251, 251, 251, 0.15);
+	}
+	.hover-overlay:focus + div {
+		background-color: black;
+		color: white;
+	}
+</style>
+<script defer src="lib/bootstrap.min.js"></script>
+<script>
+	let a = [	// アルバムの内容
+		{"type": "pic", "fn": "../bg/yun_1184.jpg", "title": "森の小川", "enabled": "true"},
+		{"type": "pic", "fn": "../bg/yun_1317.jpg", "title": "桜０", "enabled": "false"},
+		{"type": "pic", "fn": "../bg/yun_2352.jpg", "title": "桜１", "enabled": "true"},
+		{"type": "pic", "fn": "../bg/yun_2384.jpg", "title": "桜２", "enabled": "true"},
+		{"type": "pic", "fn": "../bg/title.jpg", "title": "タイトル画像", "enabled": "true"},
+		{"type": "mov", "fn": "nc10889", "title": "桜動画", "enabled": "true"},
+		{"type": "bgm", "fn": "free32", "title": "free32(BGM)", "enabled": "true"},
+		{"type": "bgm", "fn": "free49", "title": "free49(BGM)", "enabled": "true"},
+		{"type": "bgm", "fn": "free61", "title": "free61(BGM)", "enabled": "true"},
+		{"type": "bgm", "fn": "free0509", "title": "free0509(BGM)", "enabled": "true"},
+	];
+	document.ondragstart = ()=> false;
+	const isDev = (location.protocol === 'file:');
+	const isWebp = false/*WEBP*/;
+	const miken = `_album_miken.${ isWebp ?'webp' :'jpg' }`;
+	document.addEventListener('DOMContentLoaded', ()=> {
+		if (isDev) init();	// デザイン用
+		else if (isWebp) Array.from(document.getElementsByTagName('img')).forEach(v=> v.dataset.src = v.dataset.src.replace(/\.(jpe?g|png)$/, '.webp'));	// 本番でsn_repRes()に渡してしまうので
+	});
+	let tid = undefined;
+	window.addEventListener('resize', ()=> {	// SKYNovelでは初期化後一度発生
+		if (tid) return;
+		tid = setTimeout(async ()=> {tid = undefined; await initPager();}, 500);	// clearTimeout()不要と判断
+	}, {passive: true});
+	//window.addEventListener('load', ()=> {});	// どちらでも発生
+
+	// 自動ページ機構
+	let page = 0;
+	async function initPager() {
+		// init
+		const len = a.length;
+		function dispAll() {
+			for (let i=0; i<len; ++i) {
+				const c = document.getElementById(`col${i}`);
+				c.style.display = '';
+			}
+		}
+		dispAll();
+		await new Promise(re=> requestAnimationFrame(re));
+
+		// ページにぴったる収まる縦横数を調べる
+		let cx = 0, cy = 1, beforeLeft = -1;
+		let procPager = i=> {
+			const c = document.getElementById(`col${i}`);
+			const {left} = c.getBoundingClientRect();
+			const lineBreak = beforeLeft < left;
+			beforeLeft = left;
+			if (lineBreak) {++cx; return;}
+
+			procPager = i=> {
+				if (i % cx > 0) return;
+
+				const c = document.getElementById(`col${i}`);
+				const {bottom} = c.getBoundingClientRect();
+				if (window.innerHeight > bottom) {++cy; return;}
+
+				procPager = ()=> {};
+			};
+			procPager(i);
+		};
+		for (let i=0; i<len; ++i) procPager(i);
+
+		// finish
+		const numElmPerPage = cx * cy;
+		const pageMax = Math.trunc((len -1) /numElmPerPage) +1;
+		if (page > pageMax -1) page = pageMax -1;
+
+		function hideOtherPage() {
+			if (pageMax <= 1) return;
+			for (let i=0; i<len; ++i) {
+				if (page *numElmPerPage <= i && i < (page +1) *numElmPerPage) continue;
+
+				const c = document.getElementById(`col${i}`);
+				c.style.display = 'none';
+			}
+		}
+		repage = ()=> hideOtherPage();
+		hideOtherPage();
+
+		const pn = document.getElementById('pagination');
+		if (pageMax === 1) pn.style.display = 'none';
+		else {
+			pn.style.display = '';
+
+			let htm = '';
+			for (let p=0; p<pageMax; ++p) htm += `
+	<input type="radio" class="btn-check" name="page" id="page${p}" value="${p}" autocomplete="off"${p === page ?' checked' :''}>
+	<label class="btn btn-outline-secondary" for="page${p}">${p +1}</label>`;
+			pn.innerHTML = htm;
+
+			// page変更
+			const ps = document.getElementsByName('page');
+			const lenPs = ps.length;
+			ps.forEach(v=> v.addEventListener('change', ()=> {
+				for (let i=0; i<lenPs; ++i) {
+					if (! ps[i].checked) continue;
+
+					page = i;
+					dispAll();
+					hideOtherPage();
+					break;
+				}
+			}));
+		}
+	}
+	let repage = ()=> {};
+
+	// SKYNovelから読み書きする変数なので、触らない。わざとvar
+	var val_ui_lang = 'ja';
+	var val_ui = {
+		"ja": {
+			"screen name": "アルバム",
+			"now playing": "now playing",
+			"non-text": {
+				"close": "閉じる"
+			}
+		}
+	};
+	function ui_redraw() {
+		const o = val_ui[val_ui_lang];
+		for (const k in o) {
+			const elm = document.getElementById(k);
+			if (elm) elm.innerHTML = o[k];
+		}
+		const nt = o['non-text'];
+		for (const k in nt) {
+			const elm = document.getElementById(k);
+			if (elm) elm.title = elm.ariaLabel = nt[k];
+		}
+	}
+
+	var val_dic = null;
+	function init() {	// 初期化（関数名変更不可）
+		if (typeof val_ui === 'string') val_ui = JSON.parse(val_ui);
+		ui_redraw();
+
+		if (val_dic) a = JSON.parse(val_dic);
+
+		// 配列 a をもとにサムネイル群を生成
+		const lst = document.getElementsByClassName('row')[0];
+		lst.textContent = '';
+		// 注意：この画面で .col要素は insertAdjacentHTML('beforeend' 追加なので、id は昇順
+		a.forEach((v, i)=> {
+			if (v.enabled === 'false') {
+				lst.insertAdjacentHTML('beforeend', `
+<div class="col" id="col${i}"><div class="card p-1 mb-1">
+	<div class="bg-image ripple" data-ripple-color="light"
+		aria-label="まだ本編で見ていません" title="まだ本編で見ていません">
+		<img data-src="${miken}" class="img-fluid"/>
+	</div>
+	<div class="card-text">？？？</div>
+</div></div>`);
+				return;
+			}
+
+			let elm = '';
+			switch (v.type) {
+				case 'bgm':	elm = `_album_thbgm.jpg`;	break;
+				case 'mov':	elm = `${v.fn}_th.jpg`;	break;
+				default:	elm = `${v.fn}`;
+			}
+			if (isWebp) elm = elm.replace(/\.(jpe?g|png)$/, '.webp');
+			// ${v.type}でclass名にも追加、SKYNovel側でクリック検知するため
+			lst.insertAdjacentHTML('beforeend', `
+<div class="col" id="col${i}"><div class="card p-1 mb-1">
+	<div class="bg-image hover-overlay ripple ${v.type}"
+		data-ripple-color="light"
+		data-type="${v.type}" data-arg="${v.fn}" tabindex="0"
+		aria-label="${v.type} ${v.title}" title="${v.type} ${v.title}">
+		<img data-src="${elm}" class="card-img-top"/>
+		<div class="mask"></div>
+	</div>
+	<div class="card-text">${v.title}</div>
+</div></div>`);
+		});
+
+		const mdl = new bootstrap.Modal(document.getElementById('mdlView'));
+			// 純正なら new bootstrap.Modal()
+		const mdl_body = document.getElementById('modal_body');
+		Array.from(document.querySelectorAll('[data-arg]'))
+		.forEach(v=> v.addEventListener('click', ()=> {
+			switch (v.dataset.type) {
+				case 'bgm':	break;
+				case 'mov':
+					if (! isDev) break;// SKYNovelではスクリプトで
+
+					// 以下すべてデザイン用
+					mdl_body.innerHTML = `
+<video controls>
+	<source src="${v.dataset.arg}.mp4" autoplay type="video/mp4">
+</video>`;
+					mdl_body.children[0].addEventListener('ended', ()=> mdl.hide());
+					mdl.show();
+					break;
+				default:
+					if (! isDev) break;// SKYNovelではスクリプトで
+
+					mdl_body.innerHTML = `
+<img src="${v.dataset.arg}" class="card-img-top"/>`;
+					mdl.show();
+			}
+		}, {passive: true}));
+
+		Array.from(document.getElementsByTagName('img')).forEach(i=> setImg(i));
+		// 画像のイベント、一度だけ。SKYNovelでは発生しない
+		window.addEventListener('load', async ()=> await initPager());
+
+		repage();
+	}
+
+	// 画像ロード処理差し替え（関数名変更不可）
+	function sn_repRes(i) {setImg = i;}
+	let setImg = i=> i.src = i.dataset.src;
+
+	function val2ctrl() {	// 変数→コンポーネント
+		document.getElementById('fnBgm').textContent = val_fnBgm;
+	}
+
+</script>
+</head>
+<body class="bg-dark bg-gradient" oncontextmenu="return false">
+
+<nav class="navbar fixed-top navbar-expand navbar-dark bg-dark">
+<div class="container-fluid">
+
+	<div class="collapse navbar-collapse">
+		<button id="close" type="button" class="btn btn-outline-light py-0" data-bs-toggle="tooltip" aria-label="x閉じる" title="x閉じる">
+			<span style="font-size: 2em; pointer-events: none;" aria-hidden="true">&times;</span>
+		</button>
+	</div>
+
+	<div class="collapse navbar-collapse justify-content-center">
+		<span class="navbar-brand" id="screen name">アルバム</span>
+	</div>
+
+	<div class="collapse navbar-collapse justify-content-end">
+		<span class="navbar-text text-white">
+			<span id="now playing">now playing</span>: <span id="fnBgm"></span>
+		</span>
+	</div>
+
+</div>
+</nav>
+
+
+<div class="container-fluid"><div class="row row-cols-2 row-cols-sm-3 row-cols-lg-4 row-cols-xl-5 row-cols-xxl-6">
+
+<!-- 上記 val2ctrl() でクリア・再生成されるが、元は以下の連続 -->
+<div class="col"><div class="card p-1 mb-1">
+	<div class="bg-image hover-overlay ripple" data-ripple-color="light">
+		<img data-src="./_album_miken.jpg" class="img-fluid"/>
+		<div class="mask"></div>
+	</div>
+	<div class="card-text">？？？</div>
+</div></div>
+
+</div></div>
+
+
+<nav class="navbar fixed-bottom navbar-dark">
+	<div class="container-fluid justify-content-center">
+
+<div class="btn-group bg-dark" role="group" aria-label="pagination" id="pagination">
+	<input type="radio" class="btn-check" name="page" id="page0" value="0" autocomplete="off" checked>
+	<label class="btn btn-outline-secondary" for="page0">1</label>
+
+	<input type="radio" class="btn-check" name="page" id="page1" value="1" autocomplete="off">
+	<label class="btn btn-outline-secondary" for="page1">2</label>
+
+	<input type="radio" class="btn-check" name="page" id="page2" value="2" autocomplete="off">
+	<label class="btn btn-outline-secondary" for="page2">3</label>
+</div>
+
+	</div>
+</nav>
+
+
+<div id="mdlView" class="modal fade" tabindex="-1">
+<div class="modal-dialog modal-fullscreen">
+	<div id="modal_body" data-bs-dismiss="modal" class="modal-content"/>
+</div>
+</div>
+
+
+</body></html>

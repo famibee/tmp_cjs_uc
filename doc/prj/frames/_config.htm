@@ -1,0 +1,380 @@
+<!doctype html><html lang="ja">
+<head><meta charset="utf-8"/><title>&nbsp;</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="lib/bootstrap.min.css">
+<style type="text/css">
+	html {user-select: none; -webkit-user-select: none;}	/* 選択禁止 */
+	body {padding-top: 70px; min-height: 100vh;}
+	.row {--bs-gutter-x: 0.3rem;}	 /* bootstrapを微調整 */
+	.btn:hover, .btn:focus, .sn_chk:hover, .sn_chk:focus {
+		border: solid black;
+		background: rgba(204, 255, 204, 0.5);
+		color: black;
+		filter: drop-shadow(1px 3px 5px rgba(250, 250, 250, 0.9));
+	}
+	.sn_sld:hover, .sn_sld:focus {
+		border: solid black;
+		background: rgba(204, 255, 204, 0.5);
+		color: black;
+		filter: drop-shadow(1px 3px 5px rgba(250, 250, 250, 0.9));
+		border-radius: 20px;
+	}
+
+</style>
+<script defer src="lib/bootstrap.min.js"></script>
+<script>
+	const slds = document.getElementsByClassName('sn_sld');
+	const dsps = document.getElementsByClassName('dsp_val');
+	const isDev = (location.protocol === 'file:');
+	const isWebp = false/*WEBP*/;
+
+	// SKYNovelから読み書きする変数なので、触らない。わざとvar
+	var val_version = '1.00';
+	var val_sldBackAlpha = 70;
+
+	var val_ui_lang = 'ja';
+	var val_ui = {
+		"ja": {
+			"base": {
+				"screen name": "設定",
+				"現在ver": "現在 ver",
+				"non-text": {
+					"close": "閉じる"
+				}
+			},
+			"text": {
+				"text-SubTitle": "テキスト",
+				"バック不透明度": "バック不透明度",
+				"バック不透明度_説明": "文字表示サンプル<br/>テキストウインドウの不透明度を表示します。",
+				"通常文字表示待ち": "通常文字表示待ち",
+				"通常文字-待つ": "待つ",
+				"自動読みクリック待ち": "自動読みクリック待ち",
+				"自動読み改ページ待ち": "自動読み改ページ待ち",
+				"既読文字表示待ち": "既読文字表示待ち",
+				"既読文字-待つ": "待つ",
+				"既読自動クリック待ち": "既読自動クリック待ち",
+				"既読自動改ページ待ち": "既読自動改ページ待ち"
+			},
+			"sound": {
+				"sound-SubTitle": "音量",
+				"全体的": "全体的",
+				"ＢＧＭのみ": "ＢＧＭのみ",
+				"ボイスのみ": "ボイスのみ",
+				"効果音のみ": "効果音のみ",
+				"システム音のみ": "システム音のみ"
+			},
+			"system": {
+				"system-SubTitle": "システム",
+				"screen mode": "画面モード",
+				"screen mode-Sub": "全画面か",
+				"export-Sub": "プレイデータのバックアップ",
+				"import-Sub": "プレイデータのリストア",
+				"export": "エクスポート",
+				"import": "インポート"
+			}
+		}
+	};
+	function ui_redraw() {
+		const o = val_ui[val_ui_lang];
+		for (const k in o) {
+			const o2 = o[k];
+			for (const k2 in o2) {
+				const elm = document.getElementById(k2);
+				if (elm) elm.innerHTML = o2[k2];
+			}
+		}
+		const nt = o['base']['non-text'];
+		for (const k in nt) {
+			const elm = document.getElementById(k);
+			if (elm) elm.title = elm.ariaLabel = nt[k];
+		}
+	}
+
+	document.addEventListener('DOMContentLoaded', ()=> {
+		if (isDev) val2ctrl();	// デザイン用
+
+		// コンポーネントにイベント処理追加
+		for (let i=0, max=slds.length; i<max; ++i) {
+			const bar = slds[i];
+			const target = dsps[i];
+			bar.addEventListener('input', ()=> {
+				globalThis[`val_${bar.id}`] = bar.value;	// 変数更新
+				target.textContent = bar.value;			// スライダー数値表示を更新
+			}, {passive: true});
+		}
+		const chks = document.getElementsByClassName('sn_chk');
+		for (let i=0, max=chks.length; i<max; ++i) {
+			const chk = chks[i];
+			chk.addEventListener('input', ()=> {
+				globalThis[`val_${chk.id}`] = chk.checked;	// 変数更新
+			}, {passive: true});
+		}
+		document.getElementById('sldBackAlpha').addEventListener('input', e=> {
+			val_sldBackAlpha = e.target.value;
+			drawSampleView();
+		}, {passive: true});
+
+		if (isWebp) Array.from(document.getElementsByTagName('img')).forEach(v=> v.dataset.src = v.dataset.src.replace(/\.(jpe?g|png)$/, '.webp'));	// 本番でsn_repRes()に渡してしまうので
+	});
+
+	function val2ctrl() {	// 変数→コンポーネント
+		if (typeof val_ui === 'string') val_ui = JSON.parse(val_ui);
+		ui_redraw();
+
+		document.getElementById('version').textContent = val_version;
+		drawSampleView();
+
+		const sld2 = document.getElementsByClassName('sn_sld');
+		for (let i=0, max=sld2.length; i<max; ++i) {
+			const e = sld2[i];
+			e.value = globalThis[`val_${e.id}`];
+		}
+		for (let i=0, max=slds.length; i<max; ++i) {
+			dsps[i].textContent = slds[i].value;	// スライダー数値表示を更新
+		}
+
+		const chks = document.getElementsByClassName('sn_chk');
+		for (let i=0, max=chks.length; i<max; ++i) {
+			const e = chks[i];
+			e.checked = (globalThis[`val_${e.id}`] == 'true');
+		}
+
+		Array.from(document.getElementsByTagName('img')).forEach(i=> setImg(i));
+	}
+
+	// 画像ロード処理差し替え（関数名変更不可）
+	function sn_repRes(i) {setImg = i;}
+	let setImg = i=> i.src = i.dataset.src;
+
+	function ctrl2val() {	// コンポーネント→変数
+		const slds = document.getElementsByClassName('sn_sld');
+		for (let i=0, max=slds.length; i<max; ++i) {
+			const e = slds[i];
+			globalThis[`val_${e.id}`] = e.value;
+		}
+		const chks = document.getElementsByClassName('sn_chk');
+		for (let i=0, max=chks.length; i<max; ++i) {
+			const e = chks[i];
+			globalThis[`val_${e.id}`] = e.checked;
+		}
+	}
+	function drawSampleView() {	// バック不透明度のイメージ表示
+		document.getElementById('sampleBackAlpha').style.background = 'rgba(255, 255, 255, '+ (val_sldBackAlpha /100) +')';
+	}
+
+</script>
+</head>
+<body class="bg-dark bg-gradient" oncontextmenu="return false">
+
+<nav class="navbar fixed-top navbar-expand navbar-dark bg-dark">
+<div class="container-fluid">
+
+	<div class="collapse navbar-collapse mr-auto">
+		<button id="close" type="button" class="btn btn-outline-light py-0" aria-label="x閉じる" title="x閉じる" data-bs-toggle="tooltip">
+			<span style="font-size: 2em; pointer-events: none;" aria-hidden="true">&times;</span>
+		</button>
+	</div>
+
+	<div class="collapse navbar-collapse justify-content-center">
+		<span class="navbar-brand" id="screen name">x設定</span>
+	</div>
+
+	<div class="collapse navbar-collapse justify-content-end">
+		<span class="navbar-text text-white">
+			<span id="現在ver">x現在 ver</span> <span id="version">1.00</span>
+		</span>
+	</div>
+
+</div>
+</nav>
+
+
+<div class="container-fluid">
+<h3 class="text-center text-light" id="text-SubTitle">xテキスト</h3>
+<div class="row row-cols-2 row-cols-sm-3 row-cols-lg-4 row-cols-xl-5 row-cols-xxl-6">
+
+<div class="col"><div class="card text-white bg-dark border border-light p-1 mb-1">
+	<div class="card-body">
+		<p class="card-text" id="バック不透明度">xバック不透明度</p>
+	</div>
+	<input type="range" class="form-range sn_sld" id="sldBackAlpha" min="0" max="100" step="5" value="70"/>
+	<div class="card-text text-light text-right">
+		<span class="dsp_val">70</span>%
+	</div>
+</div></div>
+<div class="col"><div class="card p-1 mb-1" data-id="1">
+	<div class="bg-image hover-overlay ripple" data-ripple-color="light">
+		<img data-src="./_config_thalpha.jpg" class="img-fluid"/>
+		<div class="mask" style="background-color: rgba(251, 251, 251, 0.15);"></div>
+	</div>
+	<div class="card-img-overlay">
+		<p class="card-text" style="background: rgba(255, 255, 255, 0.7);" id="sampleBackAlpha">
+		<span id="バック不透明度_説明">
+			x文字表示サンプル<br/>
+			テキストウインドウの不透明度を表示します。
+		</span>
+	</p>
+	</div>
+</div></div>
+
+</div>
+<div class="row row-cols-2 row-cols-sm-3 row-cols-lg-4 row-cols-xl-5 row-cols-xxl-6">
+
+<div class="col"><div class="card bg-warning p-1 mb-1">
+	<div class="card-body">
+		<p class="card-text" id="通常文字表示待ち">x通常文字表示待ち</p>
+	</div>
+	<input type="range" class="form-range sn_sld" id="sldChWaitMsec" min="0" max="500" step="10" value="10"/>
+	<div class="form-check form-switch">
+		<input class="form-check-input sn_chk" type="checkbox" id="chkChDoWait"/>
+		<label class="form-check-label" for="chkChDoWait" id="通常文字-待つ">x待つ</label>
+	</div>
+	<div class="card-text text-right">
+		<span class="dsp_val">10</span> msec
+	</div>
+</div></div>
+<div class="col"><div class="card bg-warning p-1 mb-1">
+	<div class="card-body">
+		<p class="card-text" id="自動読みクリック待ち">x自動読みクリック待ち</p>
+	</div>
+	<input type="range" class="form-range sn_sld" id="sldAutoLWaitMsec" min="0" max="3500" step="10" value="3500"/>
+	<div class="card-text text-right">
+		<span class="dsp_val">3500</span> msec
+	</div>
+</div></div>
+<div class="col"><div class="card bg-warning p-1 mb-1">
+	<div class="card-body">
+		<p class="card-text" id="自動読み改ページ待ち">x自動読み改ページ待ち</p>
+	</div>
+	<input type="range" class="form-range sn_sld" id="sldAutoPWaitMsec" min="0" max="3500" step="10" value="3500"/>
+	<div class="card-text text-right">
+		<span class="dsp_val">3500</span> msec
+	</div>
+</div></div>
+
+</div>
+<div class="row row-cols-2 row-cols-sm-3 row-cols-lg-4 row-cols-xl-5 row-cols-xxl-6">
+
+<div class="col"><div class="card text-white bg-dark border border-warning p-1 mb-1">
+	<div class="card-body">
+		<p class="card-text" id="既読文字表示待ち">x既読文字表示待ち</p>
+	</div>
+	<input type="range" class="form-range sn_sld" id="sldChWaitMsec_Kidoku" min="0" max="500" step="10" value="10"/>
+	<div class="form-check form-switch">
+		<input class="form-check-input sn_chk" type="checkbox" id="chkChDoWait_Kidoku"/>
+		<label class="form-check-label" for="chkChDoWait_Kidoku" id="既読文字-待つ">待つ</label>
+	</div>
+	<div class="card-text text-light text-right">
+		<span class="dsp_val">10</span> msec
+	</div>
+</div></div>
+<div class="col"><div class="card text-white bg-dark border border-warning p-1 mb-1">
+	<div class="card-body">
+		<p class="card-text" id="既読自動クリック待ち">x既読自動クリック待ち</p>
+	</div>
+	<input type="range" class="form-range sn_sld" id="sldAutoLWaitMsec_Kidoku" min="0" max="3500" step="10" value="3500"/>
+	<div class="card-text text-light text-right">
+		<span class="dsp_val">3500</span> msec
+	</div>
+</div></div>
+<div class="col"><div class="card text-white bg-dark border border-warning p-1 mb-1">
+	<div class="card-body">
+		<p class="card-text" id="既読自動改ページ待ち">x既読自動改ページ待ち</p>
+	</div>
+	<input type="range" class="form-range sn_sld" id="sldAutoPWaitMsec_Kidoku" min="0" max="3500" step="10" value="3500"/>
+	<div class="card-text text-light text-right">
+		<span class="dsp_val">3500</span> msec
+	</div>
+</div></div>
+
+</div>
+
+<h3 class="text-center text-light" id="sound-SubTitle">x音量</h3>
+<div class="row row-cols-2 row-cols-sm-3 row-cols-lg-4 row-cols-xl-5 row-cols-xxl-6">
+
+<div class="col"><div class="card bg-info p-1 mb-1">
+	<div class="card-body">
+		<p class="card-text" id="全体的">x全体的</p>
+	</div>
+	<input type="range" class="form-range sn_sld" id="sldVolGlobal" min="0" max="100" step="5" value="80"/>
+	<div class="card-text text-right">
+		<span class="dsp_val">80</span> %
+	</div>
+</div></div>
+<div class="col"><div class="card text-white bg-dark border border-info p-1 mb-1">
+	<div class="card-body">
+		<p class="card-text" id="ＢＧＭのみ">xＢＧＭのみ</p>
+	</div>
+	<input type="range" class="form-range sn_sld" id="sldVolBgm" min="0" max="100" step="5" value="80"/>
+	<div class="card-text text-light text-right">
+		<span class="dsp_val">80</span> %
+	</div>
+</div></div>
+<div class="col"><div class="card text-white bg-dark border border-info p-1 mb-1">
+	<div class="card-body">
+		<p class="card-text" id="ボイスのみ">xボイスのみ</p>
+	</div>
+	<input type="range" class="form-range sn_sld" id="sldVolVoice" min="0" max="100" step="5" value="80"/>
+	<div class="card-text text-light text-right">
+		<span class="dsp_val">80</span> %
+	</div>
+</div></div>
+<div class="col"><div class="card text-white bg-dark border border-info p-1 mb-1">
+	<div class="card-body">
+		<p class="card-text" id="効果音のみ">x効果音のみ</p>
+	</div>
+	<input type="range" class="form-range sn_sld" id="sldVolSe" min="0" max="100" step="5" value="80"/>
+	<div class="card-text text-light text-right">
+		<span class="dsp_val">80</span> %
+	</div>
+</div></div>
+<div class="col"><div class="card text-white bg-dark border border-info p-1 mb-1">
+	<div class="card-body">
+		<p class="card-text" id="システム音のみ">xシステム音のみ</p>
+	</div>
+	<input type="range" class="form-range sn_sld" id="sldVolSys" min="0" max="100" step="5" value="80"/>
+	<div class="card-text text-light text-right">
+		<span class="dsp_val">80</span> %
+	</div>
+</div></div>
+<div class="col"><div class="card text-white bg-dark border border-info p-1 mb-1">
+	<div class="card-body">
+		<p class="card-text" id="ボイス再生中のBGM音量乗数">xボイス再生中のBGM音量乗数</p>
+	</div>
+	<input type="range" class="form-range sn_sld" id="sldVolMulTalking" min="0" max="1" step="0.1" value="0.3"/>
+	<div class="card-text text-light text-right">
+		<span class="dsp_val">0.3</span>
+	</div>
+</div></div>
+
+</div>
+
+<h3 class="text-center text-light" id="system-SubTitle">システム</h3>
+<div class="row row-cols-2 row-cols-sm-3 row-cols-lg-4 row-cols-xl-5 row-cols-xxl-6">
+
+<div class="col"><div class="card text-white bg-success p-1 mb-1">
+	<div class="card-body">
+		<p class="card-text" id="screen mode">x画面モード</p>
+		<div class="form-check form-switch">
+			<input class="form-check-input sn_chk" type="checkbox" id="chkScrMode"/>
+			<label class="form-check-label" for="chkScrMode" id="screen mode-Sub">x全画面か</label>
+		</div>
+	</div>
+</div></div>
+<div class="col"><div class="card text-white bg-dark border border-primary p-1 mb-1">
+	<div class="card-body text-center">
+		<p class="card-text" id="export-Sub">xプレイデータのバックアップ</p>
+		<button id="export" type="button" class="btn btn-primary">x export</button>
+	</div>
+</div></div>
+<div class="col"><div class="card text-white bg-dark border border-danger p-1 mb-1">
+	<div class="card-body text-center">
+		<p class="card-text" id="import-Sub">xプレイデータのリストア</p>
+		<button id="import" type="button" class="btn btn-danger">x import</button>
+	</div>
+</div></div>
+
+</div>
+</div>
+
+</body></html>

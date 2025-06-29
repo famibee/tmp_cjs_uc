@@ -1,0 +1,144 @@
+<!doctype html><html lang="ja">
+<head><meta charset="utf-8"/><title>&nbsp;</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="lib/bootstrap.min.css">
+<style type="text/css">
+	html {user-select: none; -webkit-user-select: none;}	/* 選択禁止 */
+	body {padding-top: 70px; min-height: 100vh;}
+	.btn:hover, .btn:focus {
+		background: rgba(204, 255, 204, 0.5);
+		color: black;
+		filter: drop-shadow(1px 3px 5px rgba(25, 25, 25, 0.9));
+	}
+</style>
+<script defer src="lib/bootstrap.min.js"></script>
+<script>
+	let o = {};
+	const isDev = (location.protocol === 'file:');
+	document.addEventListener('DOMContentLoaded', ()=> {
+		if (isDev) val2ctrl();	// デザイン用
+	}, false);
+
+	// SKYNovelから読み書きする変数なので、触らない。わざとvar
+	var val_dic = null;
+
+	var val_ui_lang = 'ja';
+	var val_ui = {
+		"ja": {
+			"screen name": "右クリックメニュー",
+			"save": "セーブ",
+			"load": "ロード",
+			"log": "履歴",
+			"config": "設定",
+			"hide_text": "字を隠す",
+			"cancel": "ゲームに戻る",
+			"title": "タイトルに戻る",
+			"game_end": "ゲーム終了",
+			"shortcut_htm": "<div class='col-4'>Shift、ESCキー</div><div class='col-8'>右クリックメニューを表示</div><div class='col-4'>その他……</div><div class='col-8'></div>",
+			"non-text": {
+				"close": "閉じる"
+			}
+		},
+	};
+	function ui_redraw() {
+		const o = val_ui[val_ui_lang];
+		for (const k in o) {
+			const elm = document.getElementById(k);
+			if (elm) elm.innerHTML = o[k];
+		}
+		const nt = o['non-text'];
+		for (const k in nt) {
+			const elm = document.getElementById(k);
+			if (elm) elm.title = elm.ariaLabel = nt[k];
+		}
+	}
+
+	function val2ctrl() {	// 変数→コンポーネント
+		if (typeof val_ui === 'string') val_ui = JSON.parse(val_ui);
+		ui_redraw();
+	}
+</script>
+</head>
+<body style="background: rgba(255,255,255,0.5); background-image: linear-gradient(0deg, rgba(255,255,255,0.5) 4%, rgba(0,0,0,0.5) 25%, rgba(0,0,0,0.5) 75%, rgba(255,255,255,0.5) 100%);" oncontextmenu="return false">
+
+<nav class="navbar fixed-top navbar-expand navbar-dark bg-light">
+<div class="container-fluid">
+
+	<div class="collapse navbar-collapse">
+		<button id="close" type="button" class="btn btn-outline-dark py-0" aria-label="x閉じる" title="x閉じる" data-bs-toggle="tooltip">
+			<span style="font-size: 2em; pointer-events: none;" aria-hidden="true">&times;</span>
+		</button>
+	</div>
+
+	<div class="collapse navbar-collapse justify-content-center">
+		<span class="navbar-brand text-dark" id="screen name">x右クリックメニュー</span>
+	</div>
+
+	<div class="collapse navbar-collapse justify-content-end">
+		<span class="navbar-text text-dark">
+		</span>
+	</div>
+
+</div>
+</nav>
+
+
+<div class="container-fluid my-5"><div class="row">
+	<div class="col-1"></div>
+	<div class="col-4">
+		<div class="container-fluid d-flex align-items-center justify-content-center"><div class="row gap-2">
+			<button id="save" type="button" class="btn btn-outline-light btn-lg fs-4 text-start" aria-label="セーブ" data-bs-toggle="tooltip" title="セーブ">xセーブ</button>
+			<button id="load" type="button" class="btn btn-outline-light btn-lg fs-4 text-start" aria-label="ロード" data-bs-toggle="tooltip" title="ロード">xロード</button>
+			<button id="log" type="button" class="btn btn-outline-light btn-lg fs-4 text-start" aria-label="履歴" data-bs-toggle="tooltip" title="履歴">x履歴</button>
+			<button id="config" type="button" class="btn btn-outline-light btn-lg fs-4 text-start" aria-label="設定" data-bs-toggle="tooltip" title="設定">x設定</button>
+			<button id="hide_text" type="button" class="btn btn-outline-light btn-lg fs-4 text-start" aria-label="字を隠す" data-bs-toggle="tooltip" title="字を隠す">x字を隠す</button>
+			<button id="cancel" type="button" class="btn btn-outline-light btn-lg fs-4 text-start" aria-label="ゲームに戻る" data-bs-toggle="tooltip" title="ゲームに戻る">xゲームに戻る</button>
+			<button id="title" type="button" class="btn btn-outline-light btn-lg fs-4 text-start" aria-label="タイトルに戻る" data-bs-toggle="tooltip" title="タイトルに戻る">xタイトルに戻る</button>
+			<button id="game_end" type="button" class="btn btn-outline-light btn-lg fs-4 text-start" aria-label="ゲーム終了" data-bs-toggle="tooltip" title="ゲーム終了">xゲーム終了</button>
+
+		</div></div>
+	</div>
+	<div class="col-7">
+		<div class="container-fluid d-flex align-items-center justify-content-center text-white"><div class="row" style="text-shadow: 0px 3px 3px rgba(0,0,0,0.4);" id="shortcut_htm">
+			<div class='col-4'>x	Shift、ESCキー</div>
+			<div class='col-8'>右クリックメニューを表示</div>
+
+			<div class='col-4'>Down（↓）キー</div>
+			<div class='col-8'>メッセージ読み進め。押しっぱなしでメッセージ強制スキップ</div>
+
+			<div class='col-4'>W、alt+Enterキー</div>
+			<div class='col-8'>全画面・ウインドウモード切り替え</div>
+			<div class='col-4'>Aキー</div>
+			<div class='col-8'>自動読み進み On(クリックで停止)</div>
+			<div class='col-4'>Fキー</div>
+			<div class='col-8'>強制スキップ On(クリックで停止)</div>
+
+			<div class='col-4'>SPACE、Delキー</div>
+			<div class='col-8'>字を隠す(クリックで復帰)</div>
+
+			<div class='col-4'>R、Up(↑)キー、ホイール下回転</div>
+			<div class='col-8'>履歴(本文履歴を表示、右クリックで復帰)</div>
+
+			<div class='col-4'>Cキー</div>
+			<div class='col-8'>設定(設定画面を表示、右クリックで復帰)</div>
+
+			<div class='col-4'>PAGE UPキー</div>
+			<div class='col-8'>ページ遷移状態に入る。ESCAPEで復帰</div>
+			<div class='col-4'>PAGE DOWN、PAGE UPキー</div>
+			<div class='col-8'>(ページ遷移状態で)ページを前後する</div>
+			<div class='col-4'>SHIFTキー、右クリック</div>
+			<div class='col-8'>(ページ遷移状態で)表示中ページからロード</div>
+
+			<div class='col-4'>Sキー／Lキー</div>
+			<div class='col-8'>クイックセーブ／クイックロード</div>
+			<div class='col-4'>Pキー</div>
+			<div class='col-8'>スクリーンショット(ダウンロードフォルダへ保存)</div>
+			<div class='col-4'>Vキー</div>
+			<div class='col-8'>ボイスを再度再生</div>
+
+		</div></div>
+
+	</div>
+</div></div>
+
+</body></html>

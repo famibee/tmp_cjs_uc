@@ -1,0 +1,109 @@
+{
+	"name": "tmp_cjs_uc",
+	"version": "1.0.0",
+	"productName": "桜の樹の下には",
+	"description": "梶井基次郎「桜の樹の下には」をノベルゲーム化したものです。",
+	"main": "doc/app.js",
+	"appId": "com.fc2.blog.famibee.skynovel.tmp_cjs_uc",
+	"appBundleId": "com.fc2.blog.famibee.skynovel.tmp_cjs_uc",
+	"appCopyright": "(c)ふぁみべぇ",
+	"author": "ふぁみべぇ",
+	"license": "MIT",
+	"dependencies": {
+		"@famibee/skynovel": "^1.61.21",
+		"about-window": "^1.15.2",
+		"humane-js": "^3.2.2"
+	},
+	"devDependencies": {
+		"css-loader": "^7.1.2",
+		"electron": "^37.1.0",
+		"electron-builder": "^26.0.17",
+		"rimraf": "^6.0.1",
+		"style-loader": "^4.0.0",
+		"url": "^0.11.4",
+		"webpack": "^5.99.9",
+		"webpack-cli": "^6.0.1",
+		"webpack-dev-server": "^5.2.2",
+		"webpack-obfuscator": "^3.5.1"
+	},
+	"scripts": {
+		"start": "electron doc/app.js",
+		"web": "npm run watch:wds",
+		"webpack:dev": "webpack --mode development --config ./core/webpack.config.js",
+		"webpack:dev:w": "webpack --mode development --watch --config ./core/webpack.config.js",
+		"watch:wds": "webpack-cli serve --config ./core/wds.config.js --open web.htm",
+		"watch:wdsdbg": "webpack-cli serve --config ./core/wds.config.js --open web.htm?dip=%7B%22dbg%22:true%2C%22port%22:3776%7D",
+		"webpack:pro": "rimraf doc/web.*.js && webpack --mode production --config ./core/webpack.config.js",
+		"npm_check_updates": "ncu -u --target minor && npm update && npm run webpack:dev && ncu -g",
+		"rebuild": "rimraf package-lock.json && rimraf node_modules && npm cache clear --force && npm i",
+		"postinstall": "npm run webpack:dev"
+	},
+	"build": {
+		"appId": "com.fc2.blog.famibee.skynovel.tmp_cjs_uc",
+		"productName": "桜の樹の下には",
+		"artifactName": "tmp_cjs_uc-${version}-${arch}.${ext}",
+		"directories": {
+			"output": "build/package/"
+		},
+		"files": [
+			"build/icon/*",
+			"build/include/*",
+			"doc/app/*",
+			"doc/prj/",
+			"doc/app.js"
+		],
+		"mac": {
+			"icon": "build/icon/icon.icns",
+			"target": [
+				"dmg"
+			],
+			"category": "public.app-category.games"
+		},
+		"dmg": {
+			"contents": [
+				{
+					"x": 410,
+					"y": 220,
+					"type": "link",
+					"path": "/Applications"
+				},
+				{
+					"x": 130,
+					"y": 220,
+					"type": "file"
+				},
+				{
+					"x": 130,
+					"y": 100,
+					"type": "file",
+					"path": "build/include/readme.txt"
+				}
+			]
+		},
+		"win": {
+			"icon": "build/icon/icon.ico",
+			"target": "nsis",
+			"asarUnpack": [
+				"build/include/"
+			]
+		},
+		"linux": {
+			"icon": "build/icon/icon.icns",
+			"target": "AppImage",
+			"category": "Game"
+		}
+	},
+	"keywords": [
+		"sample",
+		"skynovel"
+	],
+	"repository": {
+		"type": "git",
+		"url": "git+ssh://git@github.com:famibee/tmp_cjs_uc.git"
+	},
+	"bugs": {
+		"url": "https://github.com/famibee/tmp_cjs_uc/issues",
+		"email": "ugainovel@gmail.com"
+	},
+	"homepage": "https://famibee.blog.fc2.com/"
+}

@@ -1,0 +1,689 @@
+;********************************************************
+;	定数
+;********************************************************
+; 立ち絵配置位置定数
+;	[lay pos=&pos.l	等として使用。
+;	組み込みで「c」という指定が出来る。例：pos=c、pos='c'
+;	これを指定すると画面中央。（pos、leftを省略するとpos=c扱い）
+&pos.l = 140
+&pos.c = const.sn.config.window.width /2
+&pos.r = const.sn.config.window.width -pos.l
+&pos.lc = (pos.c + pos.l) /2
+&pos.rc = (pos.r + pos.c) /2
+
+; 「桜の樹の下には」特有の立ち絵配置位置定数
+&pos.vleft_disp_x = 40 + 280
+&pos.vleft_disp_w = const.sn.config.window.width - pos.vleft_disp_x
+
+&pos.l1c = pos.vleft_disp_x + pos.vleft_disp_w * (1/2)
+
+&pos.l2l = pos.vleft_disp_x + pos.vleft_disp_w * (1/4)
+&pos.l2r = pos.vleft_disp_x + pos.vleft_disp_w * (3/4)
+
+&save:sn.fg2.xb = pos.vleft_disp_x
+
+;********************************************************
+; マクロ タイトル開始共通処理（main.snで呼ぶ）
+;********************************************************
+[macro name=sys_title_start
+	sum='タイトル開始共通処理\nゲーム本編を開始する際の処理を行なう'
+	detail='タイトルから本編、あるいはしおりロードから本編を開始する際に呼ぶ。\nクリック待ち記号、フォント、セーブロード・設定画面などを準備する'
+]
+	&lastVoice = ''
+	&isGameState = false
+	&sys:doResume = false
+	&save:sn.doRecLog = false
+	[page clear=true]
+
+	[txt_lay_fullscreen b_alpha=0 visible=true onend=leave no_sysmenu_draw=true]
+	[er]	; ページ両面の文字消去＆改ページ
+		; （改ページしないと履歴がページからあふれる）
+	[set_focus to=null]
+;	[fadeoutbgm time=300]	; この辺は好み
+	[fadeoutse buf=SE time=500]
+	[fadeoutse buf=VOICE time=1000]
+
+	[event global=true key=sn:chgNavLang del=true]
+	[sys_menu visible=false]
+	[clear_event]
+[endmacro]
+
+;********************************************************
+; マクロ シナリオ開始時共通処理（ロード時にもコール）
+;********************************************************
+[macro name=sys_scenario_start
+	sum='シナリオ開始時共通処理\nタイトルからゲーム本編を開始する際の処理を行なう'
+	detail='シナリオファイル冒頭に記述するべき'
+]
+	&lastVoice = ''
+	&isGameState = true
+	&save:sn.doRecLog = true
+
+	[fadeoutbgm time=300]
+	[fadeoutse buf=SE time=500]
+	[fadeoutse buf=VOICE time=1000]
+
+	; テキストレイヤ全画面設定
+	[txt_lay_fullscreen b_alpha=0 no_sysmenu_draw=true]
+	[lay layer=mes page=back style="&'font-family: #{def_fonts};'"]
+	[grp bg=black sys_menu=false b_alpha=0 time=0]
+
+	[record_place layer=&dsp_lays]
+	[event global=true call=true key=sn:chgNavLang label=*chgNavLang]
+		[sys_resume_save cond='! sys:doResume && ! mp:no_resume_save']
+		&sys:doResume = true
+
+[jump label=*game_inited cond='const.game.inited']
+&const.game.inited = true
+
+	[call fn=_*]		; _**.snというスクリプトを全部コール
+	[call fn=face*]		; face**.snというスクリプトを全部コール
+
+	[event global=true call=true key=a label=*toggle_auto_read]
+	[event global=true call=true key=f label=*toggle_skip]
+	[event global=true call=true key=ctrl+f label=*toggle_skip_all]
+
+*game_inited
+	[enable_event enabled=true]
+	[set_focus to=null]
+[endmacro]
+
+;********************************************************
+; マクロ レジューム処理
+[macro name=sys_resume_load detail='レジューム処理']
+	[return cond=!sys:doResume]
+
+	[ask_ync mes=&mes.前回終了ポイントから再開しますか？ cond=!autoResume]
+	[return cond="! autoResume && _yesno=='n'"]
+
+	[jump fn=_archive label=*do_load_resume]
+[endmacro]
+
+;********************************************************
+; マクロ レジューム退避処理
+[macro name=sys_resume_save detail='レジューム退避処理']
+	[call fn=_archive label=*do_save_resume]
+[endmacro]
+
+
+;********************************************************
+; マクロ システムメニュー描画処理（縦書き）
+[macro name=sysmenu_draw_v nowarn_unused=true
+	sum='システムメニュー描画処理（縦書き）\n文字レイヤ mes_sysmenu に表示するシステムメニューを設定する'
+	detail='このマクロを改造し、ボタンの画像変更・位置変更・増減を行える'
+
+	%no_sysmenu_draw?='true、false|なにもしない|trueを指定すると、次の[grp]などでの文字レイヤ[trans]などでシステムメニューを表示しない'
+]
+	[return cond=!useSysMenu]
+	&v = const.sn.lay.mes_sysmenu.fore.visible
+	[sys_menu visible=false]
+	[clear_lay layer=mes_sysmenu page=both]
+	[return cond="mp:no_sysmenu_draw != null"]
+
+	[let name=l text=%l|40]
+	[let name=t text=%t|120]
+	[let name=w text=%w|292]
+	[let name=sysmenu_left text=&l+12]
+	[let name=sysmenu_left2 text=&sysmenu_left+w+13]
+	;&r = 0	; ボタンを横にしたいなら
+	&r = 90	; ボタンを縦にしたいなら
+
+	[lay layer=mes_sysmenu page=back visible=&v]
+	&hint_opt = '{"placement":"left","modifiers":[{"name":"offset","options":{"offset":[0,30]}}]}';
+	[button layer=mes_sysmenu page=back text=&btn.クイックセーブ rotation=&r left=&sysmenu_left2 top=&t+380 global=true event_at_down=true fn=_archive label=*quick_save call=true hint=&mes.クイックセーブ hint_opt=&hint_opt enterse=&sysse_choice]
+	[button layer=mes_sysmenu page=back text=&btn.クイックロード rotation=&r left=&sysmenu_left2 top=&t+500 global=true event_at_down=true fn=_archive label=*quick_load call=true hint=&mes.クイックロード hint_opt=&hint_opt enterse=&sysse_choice]
+
+	&hint_opt = '{"placement":"right","modifiers":[{"name":"offset","options":{"offset":[0,-90]}}]}';
+	[button layer=mes_sysmenu page=back text=&btn.タイトルへ rotation=&r left=&sysmenu_left top=&t+0 global=true event_at_down=true fn=sub label=*title_sys call=true hint=&mes.タイトルに戻る hint_opt=&hint_opt enterse=&sysse_choice]
+		; どの本文スクリプトから呼ばれるか不明なので、
+		; 同一スクリプトへのコールだがfn属性を省略してはいけない
+
+	[button layer=mes_sysmenu page=back text=&btn.セーブ rotation=&r left=&sysmenu_left top=&t+100 global=true event_at_down=true fn=_archive label=*rclick_save call=true hint=&mes.セーブ hint_opt=&hint_opt enterse=&sysse_choice]
+	[button layer=mes_sysmenu page=back text=&btn.ロード rotation=&r left=&sysmenu_left top=&t+200 global=true event_at_down=true fn=_archive label=*rclick_load call=true hint=&mes.ロード hint_opt=&hint_opt enterse=&sysse_choice]
+	[button layer=mes_sysmenu page=back text=&btn.字を隠す rotation=&r left=&sysmenu_left top=&t+300 global=true event_at_down=true fn=_hidetext label=*main call=true hint=&mes.テキスト窓非表示 hint_opt=&hint_opt enterse=&sysse_choice]
+	[button layer=mes_sysmenu page=back text=&btn.履歴を表示 rotation=&r left=&sysmenu_left top=&t+400 global=true event_at_down=true fn=_log label=*main call=true hint=&mes.本文履歴を表示 hint_opt=&hint_opt enterse=&sysse_choice]
+	[button layer=mes_sysmenu page=back text=&btn.ゲーム設定 rotation=&r left=&sysmenu_left top=&t+500 global=true event_at_down=true fn=_config label=*main call=true hint=&mes.ゲーム設定 hint_opt=&hint_opt enterse=&sysse_choice]
+	[trans layer=mes_sysmenu time=0]
+	[wt]	; 裏から表へコピー（save対策）
+[endmacro]
+
+;-----------------------------
+; マクロ システムメニュー表示切り替え
+[macro name=sys_menu
+	sum='システムメニュー表示切り替え\n文字レイヤ mes_sysmenu に表示するシステムメニューを設定する'
+	detail='このマクロを改造し、ボタンの画像変更・位置変更・増減を行える'
+]
+	[lay layer=mes_sysmenu visible=%visible|true cond=useSysMenu]
+[endmacro]
+
+[add_lay layer=mes_sysmenu class=txt cond=useSysMenu]
+[let name=sysmenu_left text=NaN]
+
+
+;********************************************************
+; マクロ テキストレイヤ縦書き左設定
+[macro name=txt_lay_v_left nowarn_unused=true
+	sum='テキストレイヤ縦書き左設定\n文字レイヤを設定する。サンプルゲーム「櫻の樹の下には」の縦書き設定'
+	detail='このマクロで文字レイヤ（page=back）に設定しておき、\n[grp]で場面転換と共に文字レイヤの設定を変えるような使い方をする'
+
+	%layer?='レイヤ名|mes|処理対象の文字レイヤ'
+	%page?='fore、back|back|ページの裏表'
+	%visible?='true、false|true|true：表示、false：非表示'
+	%l?='実数|40|テキストウインドウの左端横座標'
+	%w?='1〜|310|テキストウインドウの横幅'
+	%pr?='実数|36|テキストウインドウの右端から内側方向への、文字表示領域との間隔'
+	%fcol?='色指定|white|テキスト色'
+	%b_alpha?='0.0〜1.0；透過度|1|テキストウインドウの背景の透過度。\n0（完全透明）〜0.5（半透明）〜1（不透明）'
+	%b_alpha_isfixed?='true、false|現在値|true：テキスト背後の矩形不透明度を、「b_alpha属性と sys:TextLayer.Back.Alpha の掛け算とせず」、b_alpha属性値そのものにする'
+	%b_pic?='画像ファイル名|現在値|文字レイヤ背後の枠画像を指定する。b_alphaの影響を受ける。（これを指定するとb_colorは無視される）'
+	%no_sysmenu_draw='true、false|true|システムメニューを表示するか'
+	%back_clear?='true、false|現在値|true：背景をクリアする'
+	%break_fixed?='true、false|現在値|true：クリック待ちマークを固定位置に表示\nfalse：最後に表示した文字の次、改行せずぶら下げ位置に表示'
+	%break_fixed_left?='整数|現在値|クリック待ちマークの表示位置を指定する'
+	%break_fixed_top?='整数|現在値|クリック待ちマークの表示位置を指定する'
+	%style?='CSS style|何もしない|文字の CSS Style を指定する。\n[span][ch]などで style を指定しない際のデフォルト値。\n「color: red;」「color: blue;」と個別指定時は、過去値を上書きする。\n空白文字を指定時は全てクリアする'
+	%r_style?='CSS style|何もしない|ルビの CSS Style を指定する。\n「color: red;」「color: blue;」と個別指定時は、過去値を上書きする。\n空白文字を指定時は全てクリアする'
+	%r_align?='left、center、right、justify、121、even、1ruby|現在値|ルビ揃えを指定する'
+]
+	[let name=l text=%l|40]
+	[let name=w text=%w|310]
+	&pl = 26
+	&pt = 30
+	[let name=pr text=%pr|36]
+	&pb = 30
+	[let name=pb text=&pb-font_size*2 cond=bura_mode]	; 行末尾に二文字分のぶら下げ専用領域を確保
+	[let name=fcol text=%fcol|'white']
+	; こちらの素材をお借りしました：びたちー素材館　メッセージボックス・メッセージウィンドウ・フレーム　フリー素材 http://www.vita-chi.net/message.htm
+	[lay * layer=%layer|'mes' page=%page|back visible=%visible|true left=&l top=0
+		b_pic=%b_pic|wafuu1	; 背後に画像を使う（width・heightは画像に合わされる）
+	;	b_color=%b_color|'#ffffff'	; 背後に画像を使わない・単色塗り
+		; その際はstyleにサイズ指定必須 width: #{w}px; height: #{const.sn.config.window.height}px;
+		b_alpha=%b_alpha|1
+		bura=%bura|&bura_mode
+		style="&'color: #{fcol}; writing-mode: vertical-rl; width: #{w}px; height: #{const.sn.config.window.height}px; padding-left: #{pl}px; padding-right: #{pr}px; padding-top: #{pt}px; padding-bottom: #{pb}px; font-family: #{def_fonts}; font-size: #{font_size}px; line-height: 1.5;'"]
+	[sysmenu_draw_v *]
+[endmacro]
+
+;********************************************************
+; マクロ テキストレイヤ縦書き中設定
+[macro name=txt_lay_v_center nowarn_unused=true
+	sum='テキストレイヤ縦書き中設定\n[txt_lay_v_left]（テキストレイヤ縦書き左設定）を画面中央に移動したもの'
+	detail='このマクロで文字レイヤ（page=back）に設定しておき、\n[grp]で場面転換と共に文字レイヤの設定を変えるような使い方をする'
+
+	%layer?='レイヤ名|mes|処理対象の文字レイヤ'
+	%page?='fore、back|back|ページの裏表'
+	%visible?='true、false|true|true：表示、false：非表示'
+	%l?='実数|40|テキストウインドウの左端横座標'
+	%w?='1〜|310|テキストウインドウの横幅'
+	%pr?='実数|36|テキストウインドウの右端から内側方向への、文字表示領域との間隔'
+	%fcol?='色指定|white|テキスト色'
+	%b_alpha?='0.0〜1.0；透過度|1|テキストウインドウの背景の透過度。\n0（完全透明）〜0.5（半透明）〜1（不透明）'
+	%b_alpha_isfixed?='true、false|現在値|true：テキスト背後の矩形不透明度を、「b_alpha属性と sys:TextLayer.Back.Alpha の掛け算とせず」、b_alpha属性値そのものにする'
+	%b_pic?='画像ファイル名|現在値|文字レイヤ背後の枠画像を指定する。b_alphaの影響を受ける。（これを指定するとb_colorは無視される）'
+	%no_sysmenu_draw='true、false|true|システムメニューを表示するか'
+	%back_clear?='true、false|現在値|true：背景をクリアする'
+	%break_fixed?='true、false|現在値|true：クリック待ちマークを固定位置に表示\nfalse：最後に表示した文字の次、改行せずぶら下げ位置に表示'
+	%break_fixed_left?='整数|現在値|クリック待ちマークの表示位置を指定する'
+	%break_fixed_top?='整数|現在値|クリック待ちマークの表示位置を指定する'
+	%style?='CSS style|何もしない|文字の CSS Style を指定する。\n[span][ch]などで style を指定しない際のデフォルト値。\n「color: red;」「color: blue;」と個別指定時は、過去値を上書きする。\n空白文字を指定時は全てクリアする'
+	%r_style?='CSS style|何もしない|ルビの CSS Style を指定する。\n「color: red;」「color: blue;」と個別指定時は、過去値を上書きする。\n空白文字を指定時は全てクリアする'
+	%r_align?='left、center、right、justify、121、even、1ruby|現在値|ルビ揃えを指定する'
+]
+	[txt_lay_v_left * l=%l|366]
+[endmacro]
+
+;********************************************************
+; マクロ テキストレイヤ縦書きWide中設定
+[macro name=txt_lay_v_center_wide nowarn_unused=true
+	sum='テキストレイヤ縦書きWide中設定\n[txt_lay_v_center]（テキストレイヤ縦書き中設定）を画面中央に移動し、幅を広げたもの'
+	detail='このマクロで文字レイヤ（page=back）に設定しておき、\n[grp]で場面転換と共に文字レイヤの設定を変えるような使い方をする'
+
+	%layer?='レイヤ名|mes|処理対象の文字レイヤ'
+	%page?='fore、back|back|ページの裏表'
+	%visible?='true、false|true|true：表示、false：非表示'
+	%l?='実数|294|テキストウインドウの左端'
+	%t?='実数|40|テキストウインドウの上端'
+	%h?='1〜|画面縦幅 -40 *2|テキストウインドウの縦幅'
+	%pl?='実数|70|テキストウインドウの左端から内側方向への、文字表示領域との間隔'
+	%pt?='実数|30|テキストウインドウの上端から内側方向への、文字表示領域との間隔'
+	%pr?='実数|70|テキストウインドウの右端から内側方向への、文字表示領域との間隔'
+	%pb?='実数|70|テキストウインドウの下端から内側方向への、文字表示領域との間隔'
+	%fcol?='色指定|black|テキスト色'
+	%b_color?='色指定|0xffffff|テキストウインドウの背景色'
+	%b_alpha?='0.0〜1.0；透過度|1|テキストウインドウの背景の透過度。\n0（完全透明）〜0.5（半透明）〜1（不透明）'
+	%b_alpha_isfixed?='true、false|現在値|true：テキスト背後の矩形不透明度を、「b_alpha属性と sys:TextLayer.Back.Alpha の掛け算とせず」、b_alpha属性値そのものにする'
+	%b_pic?='画像ファイル名|現在値|文字レイヤ背後の枠画像を指定する。b_alphaの影響を受ける。（これを指定するとb_colorは無視される）'
+	%no_sysmenu_draw='true、false|true|システムメニューを表示するか'
+	%back_clear?='true、false|現在値|true：背景をクリアする'
+	%break_fixed?='true、false|現在値|true：クリック待ちマークを固定位置に表示\nfalse：最後に表示した文字の次、改行せずぶら下げ位置に表示'
+	%break_fixed_left?='整数|現在値|クリック待ちマークの表示位置を指定する'
+	%break_fixed_top?='整数|現在値|クリック待ちマークの表示位置を指定する'
+	%style?='CSS style|何もしない|文字の CSS Style を指定する。\n[span][ch]などで style を指定しない際のデフォルト値。\n「color: red;」「color: blue;」と個別指定時は、過去値を上書きする。\n空白文字を指定時は全てクリアする'
+	%r_style?='CSS style|何もしない|ルビの CSS Style を指定する。\n「color: red;」「color: blue;」と個別指定時は、過去値を上書きする。\n空白文字を指定時は全てクリアする'
+	%r_align?='left、center、right、justify、121、even、1ruby|現在値|ルビ揃えを指定する'
+]
+	[txt_lay_v_center * l=%l|294 w=436 max_row=11 pr=26
+	b_pic=wafuu1w	; 背後に画像を使わない場合はコメントアウト
+]
+[endmacro]
+
+
+;********************************************************
+; マクロ システムメニュー描画処理（横書き）
+[macro name=sysmenu_draw_h nowarn_unused=true
+	sum='システムメニュー描画処理（横書き）\n文字レイヤ mes_sysmenu に表示するシステムメニューを設定する'
+	detail='このマクロを改造し、ボタンの画像変更・位置変更・増減を行える'
+
+	%no_sysmenu_draw?='true、false|なにもしない|trueを指定すると、次の[grp]などでの文字レイヤ[trans]などでシステムメニューを表示しない'
+]
+	[return cond=!useSysMenu]
+	&v = const.sn.lay.mes_sysmenu.fore.visible
+	[sys_menu visible=false]
+	[clear_lay layer=mes_sysmenu page=both]
+	[return cond="mp:no_sysmenu_draw != null"]
+
+	[let name=sysmenu_left text=200]
+	[let name=sysmenu_top text=&const.sn.lay.mes.back.y+mp:h-10]
+	[let name=sysmenu_top text=&sysmenu_top+mp:sysmenu_top cond=mp:sysmenu_top]
+	&r = 0	; ボタンを横にしたいなら
+	;&r = 90	; ボタンを縦にしたいなら
+
+	[lay layer=mes_sysmenu page=back visible=&v]
+	[button layer=mes_sysmenu page=back text=&btn.タイトルへ rotation=&r left=&sysmenu_left top=&sysmenu_top global=true event_at_down=true fn=sub label=*title_sys call=true hint=&mes.タイトルに戻る enterse=&sysse_choice]
+		; どの本文スクリプトから呼ばれるか不明なので、
+		; 同一スクリプトへのコールだがfn属性を省略してはいけない
+
+	[button layer=mes_sysmenu page=back text=&btn.セーブ rotation=&r left=&sysmenu_left+100 top=&sysmenu_top global=true event_at_down=true fn=_archive label=*rclick_save call=true hint=&mes.セーブ enterse=&sysse_choice]
+	[button layer=mes_sysmenu page=back text=&btn.ロード rotation=&r left=&sysmenu_left+200 top=&sysmenu_top global=true event_at_down=true fn=_archive label=*rclick_load call=true hint=&mes.ロード enterse=&sysse_choice]
+	[button layer=mes_sysmenu page=back text=&btn.字を隠す rotation=&r left=&sysmenu_left+300 top=&sysmenu_top global=true event_at_down=true fn=_hidetext label=*main call=true hint=&mes.テキスト窓非表示 enterse=&sysse_choice]
+	[button layer=mes_sysmenu page=back text=&btn.履歴を表示 rotation=&r left=&sysmenu_left+400 top=&sysmenu_top global=true event_at_down=true fn=_log label=*main call=true hint=&mes.本文履歴を表示 enterse=&sysse_choice]
+	[button layer=mes_sysmenu page=back text=&btn.ゲーム設定 rotation=&r left=&sysmenu_left+500 top=&sysmenu_top global=true event_at_down=true fn=_config label=*main call=true hint=&mes.ゲーム設定 enterse=&sysse_choice]
+	[button layer=mes_sysmenu page=back text=&btn.クイックセーブ rotation=&r left=&sysmenu_left+600 top=&sysmenu_top global=true event_at_down=true fn=_archive label=*quick_save call=true hint=&mes.クイックセーブ enterse=&sysse_choice]
+	[button layer=mes_sysmenu page=back text=&btn.クイックロード rotation=&r left=&sysmenu_left+700 top=&sysmenu_top global=true event_at_down=true fn=_archive label=*quick_load call=true hint=&mes.クイックロード enterse=&sysse_choice]
+
+	[trans layer=mes_sysmenu time=0]
+	[wt]	; 裏から表へコピー（save対策）
+[endmacro]
+
+
+;********************************************************
+; マクロ テキストレイヤ全画面設定
+[macro name=txt_lay_fullscreen nowarn_unused=true
+	sum='テキストレイヤ全画面設定\n文字レイヤを設定する。全画面を覆うような設定'
+	detail='このマクロで文字レイヤ（page=back）に設定しておき、\n[grp]で場面転換と共に文字レイヤの設定を変えるような使い方をする'
+
+	%layer?='レイヤ名|mes|処理対象の文字レイヤ'
+	%page?='fore、back|back|ページの裏表'
+	%visible?='true、false|true|true：表示、false：非表示'
+	%t?='実数|40|テキストウインドウの上端'
+	%h?='1〜|画面縦幅 -40 *2|テキストウインドウの縦幅'
+	%pl?='実数|70|テキストウインドウの左端から内側方向への、文字表示領域との間隔'
+	%pt?='実数|30|テキストウインドウの上端から内側方向への、文字表示領域との間隔'
+	%pr?='実数|70|テキストウインドウの右端から内側方向への、文字表示領域との間隔'
+	%pb?='実数|70|テキストウインドウの下端から内側方向への、文字表示領域との間隔'
+	%fcol?='色指定|black|テキスト色'
+	%b_color?='色指定|0xffffff|テキストウインドウの背景色'
+	%b_alpha?='0.0〜1.0；透過度|1|テキストウインドウの背景の透過度。\n0（完全透明）〜0.5（半透明）〜1（不透明）'
+	%b_alpha_isfixed?='true、false|現在値|true：テキスト背後の矩形不透明度を、「b_alpha属性と sys:TextLayer.Back.Alpha の掛け算とせず」、b_alpha属性値そのものにする'
+	%b_pic?='画像ファイル名|現在値|文字レイヤ背後の枠画像を指定する。b_alphaの影響を受ける。（これを指定するとb_colorは無視される）'
+	%no_sysmenu_draw='true、false|true|システムメニューを表示するか'
+	%back_clear?='true、false|現在値|true：背景をクリアする'
+	%break_fixed?='true、false|現在値|true：クリック待ちマークを固定位置に表示\nfalse：最後に表示した文字の次、改行せずぶら下げ位置に表示'
+	%break_fixed_left?='整数|現在値|クリック待ちマークの表示位置を指定する'
+	%break_fixed_top?='整数|現在値|クリック待ちマークの表示位置を指定する'
+	%style?='CSS style|何もしない|文字の CSS Style を指定する。\n[span][ch]などで style を指定しない際のデフォルト値。\n「color: red;」「color: blue;」と個別指定時は、過去値を上書きする。\n空白文字を指定時は全てクリアする'
+	%r_style?='CSS style|何もしない|ルビの CSS Style を指定する。\n「color: red;」「color: blue;」と個別指定時は、過去値を上書きする。\n空白文字を指定時は全てクリアする'
+	%r_align?='left、center、right、justify、121、even、1ruby|現在値|ルビ揃えを指定する'
+]
+	[let name=t text=%t|40]
+	[let name=h text=%h|'&const.sn.config.window.height -40*2']
+	&pl = 70
+	&pt = 30
+	&pr = 70
+	&pb = 70
+	[let name=pb text=&pb-font_size*2 cond=bura_mode]	; 行末尾に二文字分のぶら下げ専用領域を確保
+	[let name=fcol text=%fcol|'black']
+	[lay * layer=%layer|'mes' page=%page|back visible=%visible|true left=0 top=&t
+		b_color=%b_color|0xffffff
+		b_alpha=%b_alpha|1
+		bura=%bura|&bura_mode
+		style="&'color: #{fcol}; width: #{const.sn.config.window.width}px; height: #{h}px; writing-mode: horizontal-tb; padding-left: #{pl}px; padding-right: #{pr}px; padding-top: #{pt}px; padding-bottom: #{pb}px; font-family: #{def_fonts}; font-size: #{font_size}px; line-height: 1.5;'"]
+	[sysmenu_draw_h * h=&h]
+[endmacro]
+
+
+;********************************************************
+; マクロ テキストレイヤ横書きWide下設定
+[macro name=txt_lay_h_bottom_wide nowarn_unused=true
+	sum='テキストレイヤ横書きWide下設定\n[txt_lay_fullscreen]（テキストレイヤ全画面設定）を画面下に移動し、幅を広げたもの'
+	detail='このマクロで文字レイヤ（page=back）に設定しておき、\n[grp]で場面転換と共に文字レイヤの設定を変えるような使い方をする'
+
+	%layer?='レイヤ名|mes|処理対象の文字レイヤ'
+	%page?='fore、back|back|ページの裏表'
+	%visible?='true、false|true|true：表示、false：非表示'
+	%t?='実数|472|テキストウインドウの上端'
+	%pl?='実数|70|テキストウインドウの左端から内側方向への、文字表示領域との間隔'
+	%pt?='実数|30|テキストウインドウの上端から内側方向への、文字表示領域との間隔'
+	%pr?='実数|70|テキストウインドウの右端から内側方向への、文字表示領域との間隔'
+	%pb?='実数|70|テキストウインドウの下端から内側方向への、文字表示領域との間隔'
+	%fcol?='色指定|black|テキスト色'
+	%b_color?='色指定|0xffffff|テキストウインドウの背景色'
+	%b_alpha?='0.0〜1.0；透過度|1|テキストウインドウの背景の透過度。\n0（完全透明）〜0.5（半透明）〜1（不透明）'
+	%b_alpha_isfixed?='true、false|現在値|true：テキスト背後の矩形不透明度を、「b_alpha属性と sys:TextLayer.Back.Alpha の掛け算とせず」、b_alpha属性値そのものにする'
+	%b_pic?='画像ファイル名|現在値|文字レイヤ背後の枠画像を指定する。b_alphaの影響を受ける。（これを指定するとb_colorは無視される）'
+	%no_sysmenu_draw='true、false|true|システムメニューを表示するか'
+	%back_clear?='true、false|現在値|true：背景をクリアする'
+	%break_fixed?='true、false|現在値|true：クリック待ちマークを固定位置に表示\nfalse：最後に表示した文字の次、改行せずぶら下げ位置に表示'
+	%break_fixed_left?='整数|現在値|クリック待ちマークの表示位置を指定する'
+	%break_fixed_top?='整数|現在値|クリック待ちマークの表示位置を指定する'
+	%style?='CSS style|何もしない|文字の CSS Style を指定する。\n[span][ch]などで style を指定しない際のデフォルト値。\n「color: red;」「color: blue;」と個別指定時は、過去値を上書きする。\n空白文字を指定時は全てクリアする'
+	%r_style?='CSS style|何もしない|ルビの CSS Style を指定する。\n「color: red;」「color: blue;」と個別指定時は、過去値を上書きする。\n空白文字を指定時は全てクリアする'
+	%r_align?='left、center、right、justify、121、even、1ruby|現在値|ルビ揃えを指定する'
+]
+	[txt_lay_fullscreen * t=%t|472 h=266 max_row=6]
+[endmacro]
+
+;***********************************************************
+; マクロ テキストレイヤ横書き上小窓設定
+;***********************************************************
+[macro name=txt_lay_window_top nowarn_unused=true
+	sum='テキストレイヤ横書き上小窓設定\n画面上端に寄せたテキストレイヤ'
+	detail='このマクロで文字レイヤ（page=back）に設定しておき、\n[grp]で場面転換と共に文字レイヤの設定を変えるような使い方をする'
+
+	%layer?='レイヤ名|mes|処理対象の文字レイヤ'
+	%page?='fore、back|back|ページの裏表'
+	%visible?='true、false|true|true：表示、false：非表示'
+	%fcol?='色指定|black|テキスト色'
+	%b_color?='色指定|0xffffff|テキストウインドウの背景色'
+	%b_alpha?='0.0〜1.0；透過度|1|テキストウインドウの背景の透過度。\n0（完全透明）〜0.5（半透明）〜1（不透明）'
+	%b_alpha_isfixed?='true、false|現在値|true：テキスト背後の矩形不透明度を、「b_alpha属性と sys:TextLayer.Back.Alpha の掛け算とせず」、b_alpha属性値そのものにする'
+	%b_pic?='画像ファイル名|現在値|文字レイヤ背後の枠画像を指定する。b_alphaの影響を受ける。（これを指定するとb_colorは無視される）'
+	%no_sysmenu_draw='true、false|true|システムメニューを表示するか'
+	%back_clear?='true、false|現在値|true：背景をクリアする'
+	%break_fixed?='true、false|現在値|true：クリック待ちマークを固定位置に表示\nfalse：最後に表示した文字の次、改行せずぶら下げ位置に表示'
+	%break_fixed_left?='整数|現在値|クリック待ちマークの表示位置を指定する'
+	%break_fixed_top?='整数|現在値|クリック待ちマークの表示位置を指定する'
+	%style?='CSS style|何もしない|文字の CSS Style を指定する。\n[span][ch]などで style を指定しない際のデフォルト値。\n「color: red;」「color: blue;」と個別指定時は、過去値を上書きする。\n空白文字を指定時は全てクリアする'
+	%r_style?='CSS style|何もしない|ルビの CSS Style を指定する。\n「color: red;」「color: blue;」と個別指定時は、過去値を上書きする。\n空白文字を指定時は全てクリアする'
+	%r_align?='left、center、right、justify、121、even、1ruby|現在値|ルビ揃えを指定する'
+]
+	[txt_lay_fullscreen * l=&1.28*30 t=&1.28*40 w=&1.28*740 h=&1.28*120+36 pt=20 pr=40 pl=40 sysmenu_top=-200]
+[endmacro]
+
+;***********************************************************
+; マクロ テキストレイヤ横書き下小窓設定
+;***********************************************************
+[macro name=txt_lay_window_bottom nowarn_unused=true
+	sum='テキストレイヤ横書き下小窓設定\n画面下端に寄せたテキストレイヤ'
+	detail='このマクロで文字レイヤ（page=back）に設定しておき、\n[grp]で場面転換と共に文字レイヤの設定を変えるような使い方をする'
+
+	%layer?='レイヤ名|mes|処理対象の文字レイヤ'
+	%page?='fore、back|back|ページの裏表'
+	%visible?='true、false|true|true：表示、false：非表示'
+	%fcol?='色指定|black|テキスト色'
+	%b_color?='色指定|0xffffff|テキストウインドウの背景色'
+	%b_alpha?='0.0〜1.0；透過度|1|テキストウインドウの背景の透過度。\n0（完全透明）〜0.5（半透明）〜1（不透明）'
+	%b_alpha_isfixed?='true、false|現在値|true：テキスト背後の矩形不透明度を、「b_alpha属性と sys:TextLayer.Back.Alpha の掛け算とせず」、b_alpha属性値そのものにする'
+	%b_pic?='画像ファイル名|現在値|文字レイヤ背後の枠画像を指定する。b_alphaの影響を受ける。（これを指定するとb_colorは無視される）'
+	%no_sysmenu_draw='true、false|true|システムメニューを表示するか'
+	%back_clear?='true、false|現在値|true：背景をクリアする'
+	%break_fixed?='true、false|現在値|true：クリック待ちマークを固定位置に表示\nfalse：最後に表示した文字の次、改行せずぶら下げ位置に表示'
+	%break_fixed_left?='整数|現在値|クリック待ちマークの表示位置を指定する'
+	%break_fixed_top?='整数|現在値|クリック待ちマークの表示位置を指定する'
+	%style?='CSS style|何もしない|文字の CSS Style を指定する。\n[span][ch]などで style を指定しない際のデフォルト値。\n「color: red;」「color: blue;」と個別指定時は、過去値を上書きする。\n空白文字を指定時は全てクリアする'
+	%r_style?='CSS style|何もしない|ルビの CSS Style を指定する。\n「color: red;」「color: blue;」と個別指定時は、過去値を上書きする。\n空白文字を指定時は全てクリアする'
+	%r_align?='left、center、right、justify、121、even、1ruby|現在値|ルビ揃えを指定する'
+]
+	[txt_lay_fullscreen * l=&1.28*30 t=&1.28*440-36 w=&1.28*740 h=&1.28*120+36 pt=20 pr=40 pl=40]
+[endmacro]
+
+;***********************************************************
+; マクロ テキストレイヤ横書き中央小窓設定
+;***********************************************************
+[macro name=txt_lay_window_middle nowarn_unused=true
+	sum='テキストレイヤ横書き中央小窓設定\n画面中央に寄せたテキストレイヤ'
+	detail='このマクロで文字レイヤ（page=back）に設定しておき、\n[grp]で場面転換と共に文字レイヤの設定を変えるような使い方をする'
+
+	%layer?='レイヤ名|mes|処理対象の文字レイヤ'
+	%page?='fore、back|back|ページの裏表'
+	%visible?='true、false|true|true：表示、false：非表示'
+	%fcol?='色指定|black|テキスト色'
+	%b_color?='色指定|0xffffff|テキストウインドウの背景色'
+	%b_alpha?='0.0〜1.0；透過度|1|テキストウインドウの背景の透過度。\n0（完全透明）〜0.5（半透明）〜1（不透明）'
+	%b_alpha_isfixed?='true、false|現在値|true：テキスト背後の矩形不透明度を、「b_alpha属性と sys:TextLayer.Back.Alpha の掛け算とせず」、b_alpha属性値そのものにする'
+	%b_pic?='画像ファイル名|現在値|文字レイヤ背後の枠画像を指定する。b_alphaの影響を受ける。（これを指定するとb_colorは無視される）'
+	%no_sysmenu_draw='true、false|true|システムメニューを表示するか'
+	%back_clear?='true、false|現在値|true：背景をクリアする'
+	%break_fixed?='true、false|現在値|true：クリック待ちマークを固定位置に表示\nfalse：最後に表示した文字の次、改行せずぶら下げ位置に表示'
+	%break_fixed_left?='整数|現在値|クリック待ちマークの表示位置を指定する'
+	%break_fixed_top?='整数|現在値|クリック待ちマークの表示位置を指定する'
+	%style?='CSS style|何もしない|文字の CSS Style を指定する。\n[span][ch]などで style を指定しない際のデフォルト値。\n「color: red;」「color: blue;」と個別指定時は、過去値を上書きする。\n空白文字を指定時は全てクリアする'
+	%r_style?='CSS style|何もしない|ルビの CSS Style を指定する。\n「color: red;」「color: blue;」と個別指定時は、過去値を上書きする。\n空白文字を指定時は全てクリアする'
+	%r_align?='left、center、right、justify、121、even、1ruby|現在値|ルビ揃えを指定する'
+]
+	[txt_lay_fullscreen * l=&1.28*40 t=&1.28*180-36/2 w=&1.28*720 h=&1.28*220+36 pt=20 pr=40 pl=40]
+[endmacro]
+
+
+;********************************************************
+; マクロ ＢＧＭ切り替え
+[macro name=bgm nowarn_unused=true
+	sum='ＢＧＭ切り替え\nBGMをクロスフェードする'
+	snippet_ext=SOUND
+
+	%fn='音声ファイル名||再生する音声ファイル名'
+	%time?='0〜；ミリ秒|再生中の曲を瞬時に停止し、指定曲を即座に再生する|変化にかける時間'
+
+	%volume?='0.0〜1.0|1.0|再生音量。ただし音量を示すシステム変数（sys:const.sn.sound.BGM.volume）は変更しない'
+	%speed?='0.0〜1.0|1.0|再生速度（0:遅い、1.0:元のまま）'
+	%pan?='0.0|-1.0〜1.0|音を出す左右位置（-1.0=左端、0.0=中央(省略値)、1.0=右端）'
+	%join?='true、false|true|trueで読み込みを待って次のタグへ進む'
+	%canskip?='true、false|true|trueでキー押下Skip中なら再生をしない'
+	%start_ms?='0〜；ミリ秒|0|再生の開始位置を指定する。0は冒頭'
+	%end_ms?='0〜；ミリ秒|末端|再生の終了位置を指定する。省略時は末端。\n正の値は「冒頭から何ms目を終端とするか」\n負の値は「末尾から何ms手前を終端とするか」の指定'
+	%ret_ms?='0〜；ミリ秒|0|ループ戻り位置を指定する。0は冒頭。\nループ再生中にend_ms指定位置（省略時は末尾）に到達した場合、この指定位置に戻る。 ループ再生しない（loop=false）際は無視される'
+]
+	[return cond='save:const.sn.sound.BGM.fn == mp:fn && const.sn.sound.BGM.playing']
+
+	[if exp='mp:time == null || sn.skip.enabled']
+		[stopbgm]
+		[playbgm *]
+	[else]
+		[stopse buf=BGM_FO]
+		[xchgbuf buf=BGM buf2=BGM_FO]
+		[fadeoutse buf=BGM_FO time=%time|500]
+
+		[playbgm * volume=0]
+		[fadebgm * volume=%volume|1 time=%time|500]
+	[endif]
+[endmacro]
+
+;********************************************************
+; マクロ 効果音
+[macro name=se nowarn_unused=true
+	sum='効果音を再生\n[playse]に引数省略時音声停止機能を付けたもの'
+	snippet_ext=SOUND
+
+	%fn?='音声ファイル名|音声停止|再生する音声ファイル名'
+	%buf?='サウンドバッファ名|VOICE|サウンドバッファを変えれば同時に複数の音を操作することが出来ます'
+
+	%loop?='true、false|false|trueでBGMのようにループ再生する'
+	%volume?='0.0〜1.0|1.0|再生音量。ただし音量を示すシステム変数（sys:const.sn.sound.BGM.volume）は変更しない'
+	%speed?='0.0〜1.0|1.0|再生速度（0:遅い、1.0:元のまま）'
+	%pan?='0.0|-1.0〜1.0|音を出す左右位置（-1.0=左端、0.0=中央(省略値)、1.0=右端）'
+	%join?='true、false|true|trueで読み込みを待って次のタグへ進む'
+	%canskip?='true、false|true|trueでキー押下Skip中なら再生をしない'
+	%start_ms?='0〜；ミリ秒|0|再生の開始位置を指定する。0は冒頭'
+	%end_ms?='0〜；ミリ秒|末端|再生の終了位置を指定する。省略時は末端。\n正の値は「冒頭から何ms目を終端とするか」\n負の値は「末尾から何ms手前を終端とするか」の指定'
+	%ret_ms?='0〜；ミリ秒|0|ループ戻り位置を指定する。0は冒頭。\nループ再生中にend_ms指定位置（省略時は末尾）に到達した場合、この指定位置に戻る。 ループ再生しない（loop=false）際は無視される'
+]
+	[stopse * cond='mp:fn == null']
+	[playse * cond='mp:fn != null' join=false]
+[endmacro]
+
+;********************************************************
+; マクロ 改ページ
+[macro name=plc nowarn_unused=true stepin=false
+	sum='場面転換\n画面を暗転し背景を変更する'
+	detail='文字レイヤをフェードアウトし、\nクロスフェードしながら背景画像（レイヤ名baseの画像レイヤ）を変更、\n前景レイヤ（レイヤ名0〜2の画像レイヤ）をクリアor画像変更し、\n文字レイヤをフェードインする'
+
+	%no_voice_stop?='true、false|false|trueなら改ページ後、音声（バッファ名「音声」の効果音）をフェードアウトしない'
+	%no_se_stop?='true、false||trueなら改ページ後、効果音（バッファ名「SE」の効果音）をフェードアウトしない'
+	%visible?='true、false|true|trueで改ページ記号を表示、falseで非表示'
+
+	%time?='0〜；ミリ秒|500|効果音フェードアウト時間。変化にかける時間'
+	%buf?='サウンドバッファ名|VOICE|サウンドバッファを変えれば同時に複数の音を操作することが出来ます'
+]
+	[ws buf=VOICE canskip=true stop=false cond='sn.auto.enabled && !sn.skip.enabled']
+	[wq]
+	[p visible=%visible|true]
+	[er]
+	[record_place layer=&dsp_lays]
+		[sys_resume_save]
+	; [sys_resume_save]後に何を書いても、ロード時は無視される。（ここを通らない）
+	; _archive.sn の【ロード後最初にしたい共通処理】*do_load_initに書く。
+	&lastVoice = ''
+	[if exp=sn.skip.enabled]
+		[stopse buf=SE]
+		[stopse buf=%buf|VOICE]
+	[else]
+		[fadeoutse buf=SE time=%time|500 cond='mp:no_se_stop === null']
+		[stopse buf=%buf|VOICE cond='mp:no_voice_stop === null']
+	[endif]
+[endmacro]
+
+;********************************************************
+; マクロ 選択肢直後にすべき処理
+[macro name=after_choice nowarn_unused=true
+	sum='選択肢直後処理\n[link]など選択肢直後にコールする'
+	detail='[record_place]などを呼んでいます'
+]
+	;[pop_stack]
+	[record_place layer=&dsp_lays]
+		[sys_resume_save]
+[endmacro]
+
+;********************************************************
+; マクロ 場面転換
+;********************************************************
+[macro name=grp nowarn_unused=true
+	sum='場面転換\n背景と立ち絵を一括で変更する'
+	detail='シナリオファイル冒頭に記述するべき'
+
+	%bg='差分名称（カンマ区切りで複数可）|何もしない|背景レイヤに対する画像ファイルを指定する'
+	%fb?='差分名称（カンマ区切りで複数可）|何もしない|背景レイヤに対する差分名称を指定する'
+	%l0?='差分名称（カンマ区切りで複数可）|クリアする|前景レイヤ0に対する画像ファイルを指定する'
+	%f0?='差分名称（カンマ区切りで複数可）|何もしない|前景レイヤ0に対する差分名称を指定する'
+	%pos0?='c、横座標|c|前景レイヤ0に対する横座標を指定する'
+	%left0?='実数；横座標|0（pos指定が優先）|前景レイヤ0に対する表示座標を指定する。\n%※left使用時はtopも必須です'
+	%top0?='実数；縦座標|0（pos指定が優先）|前景レイヤ0に対する表示座標を指定する。\n%※left使用時はtopも必須です'
+	%o0?='0.0〜1.0；透過度|何もしない|前景レイヤ0に対するレイヤの透過度。\n%0（完全透明）〜0.5（半透明）〜1（不透明）'
+	%l1?='差分名称（カンマ区切りで複数可）|クリアする|前景レイヤ1に対する画像ファイルを指定する'
+	%f1?='差分名称（カンマ区切りで複数可）|何もしない|前景レイヤ1に対する差分名称を指定する'
+	%pos1?='c、横座標|c|前景レイヤ1に対する横座標を指定する'
+	%left1?='実数；横座標|0（pos指定が優先）|前景レイヤ1に対する表示座標を指'定する。\n%※left使用時はtopも必須です'
+	%top1?='実数；縦座標|0（pos指定が優先）|前景レイヤ1に対する表示座標を指'定する。\n%※left使用時はtopも必須です'
+	%o1?='0.0〜1.0；透過度|何もしない|前景レイヤ1に対するレイヤの透過度。\n%0（完全透明）〜0.5（半透明）〜1（不透明）'
+	%l2?='差分名称（カンマ区切りで複数可）|クリアする|前景レイヤ2に対する画像ファイルを指定する'
+	%f2?='差分名称（カンマ区切りで複数可）|何もしない|前景レイ'ヤ2に対する差分名称を指定する
+	%pos2?='c、横座標|c|前景レイヤ2に対する横座標を指定する'
+	%left2?='実数；横座標|0（pos指定が優先）|前景レイヤ2に対する表示座標を指'定する。\n%※left使用時はtopも必須です'
+	%top2?='実数；縦座標|0（pos指定が優先）|前景レイヤ2に対する表示座標を指'定する。\n%※left使用時はtopも必須です'
+	%o2?='0.0〜1.0；透過度|何もしない|前景レイヤ2に対するレイヤの透過度。\n%0（完全透明）〜0.5（半透明）〜1（不透明）'
+	%rule?='画像ファイル名|画面全体ピクセルで同時にクロスフェードする|[trans]'と同じ
+	; その他[trans]と同じ属性
+	%time?='0〜；ミリ秒|1000|背景・前景の画像レイヤ変化にかける時間'
+	%t_time?='0〜；ミリ秒|300|文字レイヤ変化にかける時間'
+	%b_alpha?='0.0〜1.0；透過度|1|テキストウインドウの背景の透過度。\n0（完全透明）〜0.5（半透明）〜1（不透明）'
+	%fo_txt?='true、false|true|falseなら文字レイヤをフェードアウトしない'
+	%fi_txt?='true、false|true|falseなら文字レイヤをフェードインしない'
+	%se?='効果音ファイル名|何もしない|場面転換と同時に再生する効果音'
+	%chg0?='true、false|true|falseならレイヤを変更しない'
+	%chg1?='true、false|true|falseならレイヤを変更しない'
+	%chg2?='true、false|true|falseならレイヤを変更しない'
+]
+	[let name=t text=%t_time|300]	;省略した時の初期値
+	[let name=t text=0 cond="sn.skip.enabled"]
+	[let name=tt text=%time|1000]	;省略した時の初期値
+	[let name=tt text=0 cond="sn.skip.enabled"]
+
+	; テキストOff
+	[if exp='mp:fo_txt != false']
+		[sys_menu visible=false]
+		[lay layer=mes page=back visible=false]
+		[trans layer=mes time=&t]
+		[wt]
+		[er rec_page_break=false]
+	[endif]
+
+	; 効果音
+	[se fn=%se cond='mp:se != null']
+
+	; レイヤ切り替え・メイン
+	[lay layer=base page=back fn=%bg scale_x=%sxb|null face=%fb|null visible=true cond='mp:bg != null']
+	[img layer=0 fn=%l0|null pos=%pos0|null left=%left0|null top=%top0|null alpha=%o0|null scale_x=%sx0|null face=%f0|null cond=mp:chg0!=false]
+	[img layer=1 fn=%l1|null pos=%pos1|null left=%left1|null top=%top1|null alpha=%o1|null scale_x=%sx1|null face=%f1|null cond=mp:chg1!=false]
+	[img layer=2 fn=%l2|null pos=%pos2|null left=%left2|null top=%top2|null alpha=%o2|null scale_x=%sx2|null face=%f2|null cond=mp:chg2!=false]
+	[trans * layer=&dsp_lays_grp time=&tt]
+	[wt]
+
+	; テキストOn
+	[if exp='mp:fi_txt != false']
+		[lay layer=mes page=back visible=true b_alpha=%b_alpha|1]
+		[trans layer=mes time=&t]
+		[wt]
+		[sys_menu visible=%sys_menu|true]
+	[endif]
+[endmacro]
+
+;********************************************************
+; マクロ 文字数分のウェイトを入れる
+[macro name=wc nowarn_unused=true
+	sum='文字数分のウェイトを入れる'
+	%time='0.0〜|整数値|文字数を指定。\n指定した文字数 x 文字表示ウェイト 分のウェイトを行なう'
+]
+	[wait cond='mp:time != null && sys:sn.tagCh.doWait && !sn.skip.enabled' time='&mp:time * sys:sn.tagCh.msecWait']
+[endmacro]
+
+
+
+;********************************************************
+[return]
+
+;********************************************************
+*chgNavLang
+	[call fn=ext_lang]
+	[reload_script]
+
+;********************************************************
+*toggle_auto_read
+	&tmp:sn.auto.enabled = true
+	[notice text=&mes.自動読み進みOn]
+	[return]
+
+*toggle_skip
+	&tmp:sn.skip.enabled = true
+	[notice text=&mes.強制スキップOn]
+	[return]
+
+*toggle_skip_all
+	&sn.skip.all = true
+	&tmp:sn.skip.enabled = true
+	[notice text=&mes.強制スキップOn（未読も）]
+	[return]
+
+;********************************************************
+*title_sys
+	[enable_event enabled=false]
+	[enable_event layer=mes_sysmenu enabled=false]
+	[ask_ync mes=&mes.タイトルに戻りますか？]
+	[enable_event enabled=true]
+	[enable_event layer=mes_sysmenu enabled=true]
+	[return cond="_yesno=='n'"]
+
+	; テキストレイヤ全画面設定
+	[txt_lay_fullscreen b_alpha=0]
+	[grp bg=black sys_menu=false b_alpha=0]
+
+	[pop_stack clear=true]
+	[jump fn=title]

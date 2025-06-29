@@ -1,0 +1,54 @@
+[add_lay layer=base class=grp]
+[add_lay layer=0 class=grp]
+[add_lay layer=1 class=grp]
+[add_lay layer=2 class=grp]
+[add_lay layer=mes class=txt]
+	; レイヤを追加したい場合はここで追加しておく
+	; dsp_lays_grp にレイヤ名追記しないと、
+	; レイヤ状態がセーブ・ロードされないので注意
+
+; 表示されるレイヤ（セーブ・スナップショットなどの対象）
+&dsp_lays_grp = 'base,0,1,2'	; (HIDE GUI) 画像
+&dsp_lays = dsp_lays_grp +',mes'	; (HIDE GUI) 文字
+[let name=dsp_lays text="&dsp_lays_grp +',mes,mes_sysmenu'" cond=useSysMenu]
+
+; 各種初期値
+[if exp=const.sn.isFirstBoot]	; ゲームがインストールされ、初めての起動
+	&sys:TextLayer.Back.Alpha = 0.7	; {"lbl":"メッセージ背景不透明度","type":"rng","max":1,"min":0,"step":0.05}
+
+	&v_bgm = 1	; {"lbl":"BGM音量","type":"rng","max":1,"min":0,"step":0.05}
+	[volume buf=BGM volume=&v_bgm]
+	&v_se = 1	; {"lbl":"SE音量","type":"rng","max":1,"min":0,"step":0.05}
+	[volume buf=SE volume=&v_se]
+	&v_voice = 1	; {"lbl":"音声音量","type":"rng","max":1,"min":0,"step":0.05}
+	[volume buf=VOICE volume=&v_voice]
+
+	&vm_talking = 0.3	; {"lbl":"音声再生中のBGM乗数","type":"rng","max":1,"min":0,"step":0.1}
+	&sys:sn.sound.BGM.vol_mul_talking = v_voice
+[endif]
+
+; 各種効果音
+&sysse_ok1 = 'BurstB_11'	; {"lbl":"軽い決定音","type":"fn_snd"}
+&sysse_ok2 = 'BellA_16'		; {"lbl":"重い決定音","type":"fn_snd"}
+&sysse_ok2_long = 'BellB_11'	; {"lbl":"もっと重い決定音","type":"fn_snd"}
+&sysse_cancel = 'bell05'	; {"lbl":"キャンセル音","type":"fn_snd"}
+&sysse_choice = 'wood04'	; {"lbl":"マウスオーバー・選択音","type":"fn_snd"}
+
+&useSysMenu = true	; メッセージにシステムボタンを表示
+
+&tategaki = true	; 本文は縦書きか
+&bura_mode = true	; ぶら下げ禁則処理するか
+
+&font_size = 24	; {"lbl":"フォントサイズ","type":"rng","max":90,"min":10,"step":0.1}
+&def_fonts = 'ipamjm, "Source Han Sans CN"'	; デフォルトフォント
+;&sn.button.fontFamily = 'ipamjm'
+
+&autoResume = true	; （ブラウザ版で）自動レジュームするか
+[let name=autoResume text=false cond=!const.sn.isDebugger]
+
+&const.体験版 = false	; 体験版か
+;[title text=&const.sn.config.book.title]
+;[title text=#&const.sn.config.book.title +' 体験版'# cond=const.体験版]
+	; インストーラーにも表示したいので、一時的にアプリ名ごと変える方向で
+
+[return]
