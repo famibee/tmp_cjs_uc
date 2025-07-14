@@ -1,5 +1,13 @@
 # Change Log
 
+## v2.18.4
+- fix(core/webpack.config.js): アプリ版などのビルドエラー修正
+- fix(doc/prj/theme/ext_lang.sn): 強制スキップ、自動読み進みの多言語化データを追加
+- 既知の問題
+	- アプリビルド時、次のエラーが出る。【GitHub Personal Access Token is not set, neither programmatically, nor using env "GH_TOKEN"】
+		が、エラーが出るだけで、パッケージは正常・実行できる。問題なし。
+	- 気になる場合は【bun i electron-builder@26.0.12】で解消される。データ版をマイナーバージョンとして上げているせいでこうむっている影響。
+	- ただしベース更新をすると上がってしまうので注意（bun 更新なら問題なし）
 ## v2.18.3
 - fix: package.json の npm-scripts に【"postinstall": "npm run webpack:dev"】タスクを追加
 - fix: rebuild タスクから前述処理を削除。実行結果は同じ

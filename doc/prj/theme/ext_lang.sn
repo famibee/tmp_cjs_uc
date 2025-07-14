@@ -35,6 +35,8 @@
 	&btn.ロード = ' Load '
 	&btn.字を隠す = 'Hidden'
 	&btn.履歴を表示 = ' Log '
+	&btn.強制スキップ = 'Force skip'
+	&btn.自動読み進み = 'Auto-read'
 	&btn.ゲーム設定 = 'Settings'
 
 	; _submenu.sn
@@ -112,6 +114,8 @@
 	&btn.ロード = ' 讀 取 '
 	&btn.字を隠す = ' 隱 藏 '
 	&btn.履歴を表示 = ' 履 歷 '
+	&btn.強制スキップ = '強制跳過'
+	&btn.自動読み進み = '自動閱讀'
 	&btn.ゲーム設定 = ' 設 定 '
 
 	; _submenu.sn
@@ -190,6 +194,8 @@
 	&btn.ロード = ' 讀 取 '
 	&btn.字を隠す = '隱藏字框 '
 	&btn.履歴を表示 = '文字履歷 '
+	&btn.強制スキップ = '强制跳过'
+	&btn.自動読み進み = '自动阅读'
 	&btn.ゲーム設定 = '遊戲設定 '
 
 	; _submenu.sn
@@ -266,6 +272,8 @@
 	&btn.ロード = ' Cargar '
 	&btn.字を隠す = 'texto oculto '
 	&btn.履歴を表示 = 'historia '
+	&btn.強制スキップ = 'Forzar salto'
+	&btn.自動読み進み = 'Lectura automática'
 	&btn.ゲーム設定 = 'Opciones '
 
 	; _submenu.sn
@@ -343,6 +351,8 @@
 	&btn.ロード = ' ロード '
 	&btn.字を隠す = '字を隠す'
 	&btn.履歴を表示 = ' 履 歴 '
+	&btn.強制スキップ = '強制スキップ'
+	&btn.自動読み進み = '自動読み進み'
 	&btn.ゲーム設定 = ' 設 定 '
 
 	; _submenu.sn

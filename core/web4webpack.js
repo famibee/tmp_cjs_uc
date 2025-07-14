@@ -9,5 +9,4 @@ for (const nm in h) hPlg[nm] = require(`./plugin/${nm}`);
 import {SysWeb} from '@famibee/skynovel/web';
 globalThis.addEventListener('DOMContentLoaded', async ()=> {
 	new SysWeb(hPlg);	// 拡張機能で【(hPlg);】置換するので触らない
-
 }, {once: true, passive: true});
