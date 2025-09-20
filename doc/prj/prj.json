@@ -1,5 +1,5 @@
 {
-	"save_ns": "uc",
+	"save_ns": "tmp_cjs_uc",
 	"window": {
 		"width": 1024,
 		"height": 768
@@ -34,5 +34,5 @@
 		"variable": false
 	},
 	"code": {},
-	"debuger_token": "5be63778-cd62-4b14-a664-65bc560628f9"
+	"debuger_token": ""
 }

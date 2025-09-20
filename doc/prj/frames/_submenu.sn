@@ -103,7 +103,7 @@
 [return]
 
 
-*page	[page to=&sn.eventArg key='pageup,pagedown,rightclick,shift,escape' cond=isGameState][return]
+*page	[page to=&sn.eventArg cond=isGameState][return]
 
 *escape
 	[if exp=const.sn.isPaging]

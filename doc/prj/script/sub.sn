@@ -33,7 +33,7 @@
 	&isGameState = false
 	&sys:doResume = false
 	&save:sn.doRecLog = false
-	[page clear=true]
+	[page clear=true key='pageup,pagedown,rightclick,shift,escape']
 
 	[txt_lay_fullscreen b_alpha=0 visible=true onend=leave no_sysmenu_draw=true]
 	[er]	; ページ両面の文字消去＆改ページ
@@ -597,7 +597,7 @@
 	%b_alpha?='0.0〜1.0；透過度|1|テキストウインドウの背景の透過度。\n0（完全透明）〜0.5（半透明）〜1（不透明）'
 	%fo_txt?='true、false|true|falseなら文字レイヤをフェードアウトしない'
 	%fi_txt?='true、false|true|falseなら文字レイヤをフェードインしない'
-	%se?='効果音ファイル名|何もしない|場面転換と同時に再生する効果音'
+	%se?='音声ファイル名|何もしない|場面転換と同時に再生する効果音'
 	%chg0?='true、false|true|falseならレイヤを変更しない'
 	%chg1?='true、false|true|falseならレイヤを変更しない'
 	%chg2?='true、false|true|falseならレイヤを変更しない'
@@ -657,18 +657,18 @@
 
 ;********************************************************
 *toggle_auto_read
-	&tmp:sn.auto.enabled = true
+	&sn.auto.enabled = true
 	[notice text=&mes.自動読み進みOn]
 	[return]
 
 *toggle_skip
-	&tmp:sn.skip.enabled = true
+	&sn.skip.enabled = true
 	[notice text=&mes.強制スキップOn]
 	[return]
 
 *toggle_skip_all
 	&sn.skip.all = true
-	&tmp:sn.skip.enabled = true
+	&sn.skip.enabled = true
 	[notice text=&mes.強制スキップOn（未読も）]
 	[return]
 

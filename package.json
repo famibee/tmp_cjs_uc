@@ -10,18 +10,18 @@
 	"author": "ふぁみべぇ",
 	"license": "MIT",
 	"dependencies": {
-		"@famibee/skynovel": "^1.61.21",
+		"@famibee/skynovel": "^1.62.3",
 		"about-window": "^1.15.2",
 		"humane-js": "^3.2.2"
 	},
 	"devDependencies": {
 		"css-loader": "^7.1.2",
-		"electron": "^37.2.1",
-		"electron-builder": "^26.0.18",
+		"electron": "^38.1.2",
+		"electron-builder": "<26.0.15",
 		"rimraf": "^6.0.1",
 		"style-loader": "^4.0.0",
 		"url": "^0.11.4",
-		"webpack": "^5.100.1",
+		"webpack": "^5.101.3",
 		"webpack-cli": "^6.0.1",
 		"webpack-dev-server": "^5.2.2",
 		"webpack-obfuscator": "^3.5.1"
@@ -36,12 +36,13 @@
 		"webpack:pro": "rimraf doc/web.*.js && webpack --mode production --config ./core/webpack.config.js",
 		"npm_check_updates": "ncu -u --target minor && npm update && npm run webpack:dev && ncu -g",
 		"rebuild": "rimraf package-lock.json && rimraf node_modules && npm cache clear --force && npm i",
+		"slimdown_mod": "npm un @ffmpeg-installer/ffmpeg fluent-ffmpeg fs-extra p-queue sharp",
 		"postinstall": "npm run webpack:dev"
 	},
 	"build": {
 		"appId": "com.fc2.blog.famibee.skynovel.tmp_cjs_uc",
 		"productName": "桜の樹の下には",
-		"artifactName": "tmp_cjs_uc-${version}-${arch}.${ext}",
+		"artifactName": "${name}-${version}-${arch}.${ext}",
 		"directories": {
 			"output": "build/package/"
 		},
@@ -52,6 +53,7 @@
 			"doc/prj/",
 			"doc/app.js"
 		],
+		"asar": true,
 		"mac": {
 			"icon": "build/icon/icon.icns",
 			"target": [
