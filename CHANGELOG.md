@@ -1,5 +1,7 @@
 # Change Log
 
+## v2.18.7
+- fix: ライブラリ更新
 ## v2.18.6
 - fix(doc/app.js): システムメニュー名をアプリ名になど修正
 - fix(doc/prj/script/sub.sn)
