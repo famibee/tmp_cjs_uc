@@ -1,5 +1,8 @@
 # Change Log
 
+## v2.18.8
+- fix: package.json 更新
+- fix: ライブラリ更新
 ## v2.18.7
 - fix: ライブラリ更新
 ## v2.18.6
