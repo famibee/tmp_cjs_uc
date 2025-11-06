@@ -1,5 +1,7 @@
 # Change Log
 
+## v2.18.9
+- fix: package.json に publisher 項目追加対応
 ## v2.18.8
 - fix: package.json 更新
 - fix: ライブラリ更新

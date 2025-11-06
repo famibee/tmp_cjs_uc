@@ -15,7 +15,7 @@ app.setPath('userData', app.getPath('appData') +'/'+ app.name);
 
 crashReporter.start({
 	productName	: app.name,
-	companyName	: "電子演劇部",
+	companyName	: pkg.publisher,
 	submitURL	: pkg.homepage,
 	compress	: true,
 });

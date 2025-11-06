@@ -16,8 +16,10 @@
 	[event global=true call=true key=shift label=*escape arg=load]
 	[event global=true call=true key=escape label=*escape arg=exit]
 
+	[event global=true call=true key=home label=*page arg=oldest]
 	[event global=true call=true key=pageup label=*page arg=prev]
 	[event global=true call=true key=pagedown label=*page arg=next]
+	[event global=true call=true key=end label=*page arg=newest]
 
 [let_ml name=dicUI]
 	{
