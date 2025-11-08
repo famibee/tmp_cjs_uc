@@ -1,7 +1,20 @@
 # Change Log
 
+## v2.19.0
+- feat(doc/app/about-window.css): 「このアプリは……」ウインドウのデザインを調整できる css 追加
+	- 「このアプリは……」でアイコンが出るか
+		- アプリ起動
+		- パッケージ版
+	- 「このアプリは……」で css が使えるか
+		- アプリ起動
+		- パッケージ版
+- fix(doc/app.js): 「このアプリは……」ウインドウを出し->閉じ->出しで内部エラーになる件
+- fix(package.json): homepage 削除
+	- 「このアプリは……」ウインドウに表示されるので
 ## v2.18.9
-- fix: package.json に publisher 項目追加対応
+- fix(doc/app.js): 「このアプリは……」でアイコンが出ない件
+- fix(doc/app.js): package.json から publisher を読み込むように
+- fix(package.json): publisher 項目追加
 ## v2.18.8
 - fix: package.json 更新
 - fix: ライブラリ更新
@@ -39,6 +52,8 @@
 ## v2.18.3
 - fix: package.json の npm-scripts に【"postinstall": "npm run webpack:dev"】タスクを追加
 - fix: rebuild タスクから前述処理を削除。実行結果は同じ
+- fix: core/app4webpack.js【new SysApp(hPlg);】を DOMContentLoaded イベント発生後に
+- fix: core/web4webpack.js【new SysWeb(hPlg);】を DOMContentLoaded イベント発生後に
 ## v2.18.2
 - fix: 生成ファイルのファイル名を短縮
 ## v2.18.1
@@ -221,10 +236,10 @@
 - fix: [bgm]再生中に同名BGMを再生しようとした際は処理なしとする挙動に
 - fix: [sys_title_start]を main.sn から title.sn 冒頭へ移動
 ## v2.12.11
-- fix: [fg]に snippet_ext=SP_GSM 追加
+- fix: [fg][fg2]に snippet_ext=SP_GSM 追加
 - fix: [bgm][se]に snippet_ext=SOUND 追加
 ## v2.12.10
-- fix: [fg]説明修正
+- fix: [fg][fg2]説明修正
 ## v2.12.9
 - fix: [grp]%ruleの型を修正。【画像ファイル名（swf不可）】→【画像ファイル名】
 - fix: [bgm]%fnの型を修正。【BGM音声ファイル名】→【音声ファイル名】
@@ -296,6 +311,8 @@
 ## v2.9.6
 - fix: ブラウザ版で全画面時にセンタリングするように
 	- doc/web.htm 変更（cssで「canvas」→「canvas#skynovel」）
+## v2.9.4
+- fix: doc/prj/theme/ext_fg2.sn 更新
 ## v2.9.3
 - fix: build/include/readme.txt：保存先ミスを修正（デスクトップ→ダウンロードフォルダ）
 - fix: doc/app.js：SKYNovel.initRenderer()引数変更：SKYNovel v1.25.8 以降必須対応

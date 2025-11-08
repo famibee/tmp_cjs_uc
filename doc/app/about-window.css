@@ -1,0 +1,18 @@
+/* ***** BEGIN LICENSE BLOCK *****
+	Copyright (c) 2025-2025 Famibee (famibee.blog38.fc2.com)
+
+	This software is released under the MIT License.
+	http://opensource.org/licenses/mit-license.php
+** ***** END LICENSE BLOCK ***** */
+
+/*
+	設定項目・デフォルト値はこちらと思われる
+	https://github.com/rhysd/electron-about-window/blob/master/styles/ui.css
+*/
+
+body {
+	/* background-color: #66bb66; */
+
+	/* グラデーション背景 */
+	background-image: linear-gradient(90deg, rgba(233, 233, 233, 1), rgba(172, 172, 172, 1));
+}

@@ -12,13 +12,13 @@
 	"homepage": "https://famibee.blog.fc2.com/",
 	"license": "MIT",
 	"dependencies": {
-		"@famibee/skynovel": "^1.64.10",
+		"@famibee/skynovel": "^1.64.11",
 		"about-window": "^1.15.2",
 		"humane-js": "^3.2.2"
 	},
 	"devDependencies": {
 		"css-loader": "^7.1.2",
-		"electron": "^39.1.0",
+		"electron": "^39.1.1",
 		"electron-builder": "^26.1.0",
 		"rimraf": "^6.1.0",
 		"style-loader": "^4.0.0",
@@ -106,7 +106,6 @@
 		"url": "git+ssh://git@github.com:famibee/tmp_cjs_uc.git"
 	},
 	"bugs": {
-		"url": "https://github.com/famibee/tmp_cjs_uc/issues",
 		"email": "ugainovel@gmail.com"
 	}
 }
