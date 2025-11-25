@@ -1,0 +1,28 @@
+; -------------------------------------
+;	体験版
+; -------------------------------------
+[sys_scenario_start]
+	; *** BG ***
+	[grp bg=black rule=r_uzumaki fi_txt=false]
+
+	[wait time=3000]
+
+	; *** BGM ***
+	[bgm fn=free61 time=2000]
+
+	; *** テキストレイヤ縦書き中設定 ***
+	[txt_lay_v_center]
+	; *** BG ***
+	[grp bg=yun_1317 fo_txt=false]
+
+　──と、いいところですが。@
+「桜の樹の下には」体験版は此処までです。@
+　お読みいただき、ありがとうございました！\
+
+
+	; *** BG ***
+	[grp bg=black time=1000 fi_txt=false]
+
+	[wait time=3000]
+
+[jump fn=title]

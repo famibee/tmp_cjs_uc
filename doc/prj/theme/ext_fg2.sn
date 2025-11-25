@@ -67,7 +67,7 @@
 		&&'save:sn.fg2.hu.'+ lay +'.pos' = null
 		&&'save:sn.fg2.l2hu.'+ lay = null
 		[let_replace name=save:sn.fg2.lays text=&save:sn.fg2.lays@str val='' reg=&lay cast=str]
-;[trace text="&'== del lays:'+ save:sn.fg2.lays@str +': lay:'+ lay"]
+; [trace text="&'== del:'+ mp:del +' lays:'+ save:sn.fg2.lays@str +': lay:'+ lay"]
 		[fg * layer=&lay]
 		[return]
 	[endif]
@@ -91,7 +91,7 @@
 	[endif]
 
 	&mylay = save:sn.fg2.hu[h]
-;[trace text="&'== chg hu:'+ h +' lay:'+ mylay +' v:'+ const.sn.lay[mylay].fore.visible +' w:'+ const.sn.lay[mylay].fore.width"]
+;[trace text="&'== chg h:'+ h +' A:'+ (mylay != null) +' lay:'+ mylay +' v:'+ const.sn.lay[mylay].fore.visible +' w:'+ const.sn.lay[mylay].fore.width"]
 	[if exp='mylay != null && const.sn.lay[mylay].fore.visible && const.sn.lay[mylay].fore.width > 0']
 		[fg2_attention layer=&mylay]
 		[fg * layer=&mylay pos='&save:sn.fg2.hu[mylay].pos']

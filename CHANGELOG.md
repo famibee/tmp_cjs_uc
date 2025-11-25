@@ -1,5 +1,11 @@
 # Change Log
 
+## v2.20.0
+- feat(doc/prj/theme/trial.sn): 「体験版はここまで」スクリプト追加
+- feat(doc/prj/script/ss_000.sn): 【設定画面】-【テンプレ】で「体験版か」チェックを入れた場合、trial.sn に飛ぶ処理追加
+- fix(setting.sn): 場所移動 doc/prj/script/ -> doc/prj/theme/
+## v2.19.2
+-fix(doc/prj/script/setting.sn): 体験版では初期タイトルを【タイトル + ' 体験版'】にするように
 ## v2.19.0
 - feat(doc/app/about-window.css): 「このアプリは……」ウインドウのデザインを調整できる css 追加
 	- 「このアプリは……」でアイコンが出るか
