@@ -42,13 +42,12 @@
 	document.addEventListener('DOMContentLoaded', ()=> {
 		if (isDev) init();	// デザイン用
 		else if (isWebp) Array.from(document.getElementsByTagName('img')).forEach(v=> v.dataset.src = v.dataset.src.replace(/\.(jpe?g|png)$/, '.webp'));	// 本番でsn_repRes()に渡してしまうので
-	});
+	}, {once: true});
 	let tid = undefined;
 	window.addEventListener('resize', ()=> {	// SKYNovelでは初期化後一度発生
 		if (tid) return;
 		tid = setTimeout(async ()=> {tid = undefined; await initPager();}, 500);	// clearTimeout()不要と判断
-	}, {passive: true});
-	//window.addEventListener('load', ()=> {});	// どちらでも発生
+	});
 
 	// 自動ページ機構
 	let page = 0;
@@ -225,11 +224,9 @@
 <img src="${v.dataset.arg}" class="card-img-top"/>`;
 					mdl.show();
 			}
-		}, {passive: true}));
+		}));
 
 		Array.from(document.getElementsByTagName('img')).forEach(i=> setImg(i));
-		// 画像のイベント、一度だけ。SKYNovelでは発生しない
-		window.addEventListener('load', async ()=> await initPager());
 
 		repage();
 	}

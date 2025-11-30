@@ -30,7 +30,7 @@
 	const isDev = (location.protocol === 'file:');
 	document.addEventListener('DOMContentLoaded', ()=> {
 		if (isDev) val2ctrl();	// デザイン用
-	}, false);
+	}, {once: true});
 
 	// SKYNovelから読み書きする変数なので、触らない。わざとvar
 	var val_dic = null;
@@ -111,7 +111,7 @@
 				const rct = document.getElementById(`r${i}`)
 				.getBoundingClientRect();
 				const py = rct.top -yLog;
-				v.addEventListener('click', ()=> scrl(py), {passive: true});
+				v.addEventListener('click', ()=> scrl(py));
 			});
 		}, 0);
 	}

@@ -86,12 +86,12 @@
 	let tgl_del = ()=> {};
 	document.addEventListener('DOMContentLoaded', ()=> {
 		if (isDev) {	// デザイン用
-			document.getElementById('do_loadsave').addEventListener('click', ()=> console.log(`do_loadsave:${val_place}`), {passive: true});
+			document.getElementById('do_loadsave').addEventListener('click', ()=> console.log(`do_loadsave:${val_place}`));
 			val2ctrl();
 		}
 		else if (isWebp) Array.from(document.getElementsByTagName('img')).forEach(v=> v.dataset.src = v.dataset.src.replace(/\.(jpe?g|png)$/, '.webp'));	// 本番でsn_repRes()に渡してしまうので
 
-		document.getElementById('tgl_del').addEventListener('click', ()=> tgl_del(), {passive: true});
+		document.getElementById('tgl_del').addEventListener('click', ()=> tgl_del());
 
 		document.getElementById('do_del').addEventListener('click', ()=> {
 			if (isDev) console.log(`do_delete:${val_place}`);	// デザイン用
@@ -105,7 +105,7 @@
 				if (val_mode === 'Save') a = a.slice(0, -1);
 				setTimeout(()=> val2ctrl(), 500);
 			}
-		}, {passive: true});
+		});
 
 		Array.from(document.getElementsByClassName('modal'))
 		.forEach(elm=> {
@@ -134,13 +134,12 @@
 				}`).focus();
 			});
 		});
-	});
+	}, {once: true});
 	let tid = undefined;
 	window.addEventListener('resize', ()=> {	// SKYNovelでは初期化後一度発生
 		if (tid) return;
 		tid = setTimeout(async ()=> {tid = undefined; await initPager();}, 500);	// clearTimeout()不要と判断
-	}, {passive: true});
-	//window.addEventListener('load', ()=> {});	// どちらでも発生
+	});
 
 	// 自動ページ機構
 	let page = 0;
@@ -344,10 +343,10 @@
 
 				document.getElementById('modal_mes').textContent =
 					(val_mode === 'Save') ?val_ui['セーブ警告'] :'';
-			}, {passive: true});
+			});
 			if (! v.hasAttribute('tabindex')) v.tabIndex = 0;// フォーカスを持つように
-			v.addEventListener('focus', ()=> v.classList.add('z-depth-4'), {passive: true});
-			v.addEventListener('blur', ()=> v.classList.remove('z-depth-4'), {passive: true});
+			v.addEventListener('focus', ()=> v.classList.add('z-depth-4'));
+			v.addEventListener('blur', ()=> v.classList.remove('z-depth-4'));
 		});
 
 		// 編集ボタン（削除ボタンを表示する）
@@ -376,8 +375,6 @@
 		});
 
 		Array.from(document.getElementsByTagName('img')).forEach(i=> setImg(i));
-		// 画像のイベント、一度だけ。SKYNovelでは発生しない
-		window.addEventListener('load', async ()=> await initPager());
 
 		repage();
 	}

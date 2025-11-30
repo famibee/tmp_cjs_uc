@@ -1,5 +1,14 @@
 # Change Log
 
+## v2.21.0
+- fix: フレーム画面でメモリリーク修正
+	- doc/prj/frames/_album.htm
+	- doc/prj/frames/_archive.htm
+	- doc/prj/frames/_config.htm
+	- doc/prj/frames/_log.htm
+	- doc/prj/frames/_submenu.htm
+	- doc/prj/frames/_yesno.htm
+- fix: ライブラリ更新
 ## v2.20.0
 - feat(doc/prj/theme/trial.sn): 「体験版はここまで」スクリプト追加
 - feat(doc/prj/script/ss_000.sn): 【設定画面】-【テンプレ】で「体験版か」チェックを入れた場合、trial.sn に飛ぶ処理追加
