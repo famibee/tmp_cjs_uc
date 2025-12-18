@@ -141,7 +141,6 @@
 	[frame id=album visible=false]
 	[wv fn=&sn.event.domdata.arg]
 
-		[stopfadese buf=BGM]
 		[volume buf=BGM volume=&vol]
 		[playbgm fn=&fn cond='fn!=""']
 	[frame id=album visible=true]

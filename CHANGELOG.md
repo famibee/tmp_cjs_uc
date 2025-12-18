@@ -1,5 +1,8 @@
 # Change Log
 
+## v2.21.1
+- fix: ライブラリ更新（@famibee/skynovel@2.0.0）
+- remove(doc/prj/frames/_album.sn): [stopfadese] 使用箇所削除
 ## v2.21.0
 - fix: フレーム画面でメモリリーク修正
 	- doc/prj/frames/_album.htm
